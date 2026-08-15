@@ -1,5 +1,14 @@
 # 📋 Boomi Companion Project Changelog
 
+## [1.17.0] - Update 1: Stealth Pro UI/UX Overhaul
+- **`index.html` — Commercial-grade HUD:** developer clutter stripped from the `.status-bar` (long shortcut string removed; `diag-badge` / `click-badge` hidden by default). Mode badge re-branded **SCRIPT → SPEAK** / **ARCHITECT → THINK** (live via `Alt+M`). `#answer-box` upgraded to glassmorphism — `rgba(15, 23, 42, 0.85)` + `backdrop-filter: blur(12px)` (+ `-webkit-` prefix), smooth scrolling retained.
+- **`index.html` — Floating Toast Scorecard:** `#scorecard-box` converted from an inline layout-shifting block to an absolutely positioned toast (`top: 15px; right: 15px; z-index: 1000`) that fades in/out via `opacity` + `translateY` — it **never shifts the answer layout**. `Alt+A` shows it for 8s then fades out.
+- **`index.html` — Slide-out drawers:** `#shortcuts-drawer` (grid of all hotkeys) and `#settings-drawer` (Window Opacity 30–100% + Font Size 14–28px sliders). New `toggleDrawer(id)` slides panels in/out with a transform transition; drawers auto-close after **8s of mouse inactivity**. Opacity slider sends `set-opacity` to main; font-size slider live-updates `#answer-box` font-size.
+- **`index.html` — Freeform resize handles:** invisible drag zones `#resize-e` (e-resize), `#resize-s` (s-resize), `#resize-se` (se-resize) with pointer-based dragging that sends `resize-window-free` (clamped to 400×100 min) to main.
+- **`main.js`:** new global shortcuts **`Alt+H`** (`toggle-shortcuts`) and **`Alt+O`** (`toggle-settings`); new `ipcMain.on('set-opacity')` listener (clamped 0.1–1.0); new `ipcMain.on('resize-window-free')` freeform-size listener.
+- Deepgram WebSocket logic, Groq/Gemini API routing, and `engine.js` imports were **NOT** touched (UI-only change).
+- Test Suite: **88 engine + 24 diagnostic + 9 audio-pipeline tests passing (121 total, 0 failed)** — UI-only, engine unaffected.
+
 ## [1.16.0] - Phase 12: Multi-Tier Model Split, Fuzzy Local RAG & Gemini Failover Router
 - **`engine.js` — Multi-Tier Router (`routerMode`):** new `DEFAULT_CFG.routerMode` (`'hybrid'` default | `'rag-only'` | `'agent-only'`) and `fastModel: 'llama-3.1-8b-instant'` (answer tier stays `llama-3.3-70b-versatile`). `_searchLocalScenarios` returns `null` in `agent-only` mode; fuzzy-matches when **>= 75%** of a scenario's keywords are present (was: all keywords required). In `rag-only` mode, `_runFinalAnswer` / `_runDraft` never call an external API — a scenario miss resolves locally with the safe fallback *"I focus on Boomi integration architecture. Could you clarify your question?"* (and `_scheduleFastPath` is skipped too, so no API is hit anywhere).
 - **`index.html` — Multi-Tier Model Split:** `callGroq` uses `llama-3.1-8b-instant` for the fast/JSON tier (`mode === true`) and `llama-3.3-70b-versatile` for the answer tier.

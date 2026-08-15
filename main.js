@@ -11,6 +11,20 @@ let clickThroughEnabled = false;
 let isPanicMode = false;
 let isCandidateMicOn = false;
 
+// Phase 4.6 + Update 2 — Instant Vanish (shared by the Alt+P hotkey and the
+// 👻 Panic button). Opacity 0 hides the overlay while audio/websockets keep
+// running; Alt+P (or a second click) restores it.
+function togglePanicMode() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  isPanicMode = !isPanicMode;
+  mainWindow.setOpacity(isPanicMode ? 0 : 1);
+  if (isPanicMode) {
+    mainWindow.setIgnoreMouseEvents(true, { forward: true });
+  } else {
+    mainWindow.setIgnoreMouseEvents(clickThroughEnabled, { forward: true });
+  }
+}
+
 app.on('web-contents-created', (event, contents) => {
   contents.session.setPermissionRequestHandler((webContents, permission, callback) => {
     if (permission === 'display-capture' || permission === 'display-media' || permission === 'media') {
@@ -102,18 +116,20 @@ function createWindow() {
     sendHotkey('analyze-candidate');
   });
 
+  // Update 1 — Stealth Pro HUD: Alt+H toggles the shortcuts drawer,
+  // Alt+O toggles the settings drawer (opacity + font-size sliders).
+  globalShortcut.register('Alt+H', () => {
+    sendHotkey('toggle-shortcuts');
+  });
+  globalShortcut.register('Alt+O', () => {
+    sendHotkey('toggle-settings');
+  });
+
   // Phase 4.6 — Panic hotkey (Instant Vanish): Alt+P toggles stealth visibility.
   // Opacity 0 hides it visually while keeping audio/websockets running.
-  globalShortcut.register('Alt+P', () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-    isPanicMode = !isPanicMode;
-    mainWindow.setOpacity(isPanicMode ? 0 : 1);
-    if (isPanicMode) {
-      mainWindow.setIgnoreMouseEvents(true, { forward: true });
-    } else {
-      mainWindow.setIgnoreMouseEvents(clickThroughEnabled, { forward: true });
-    }
-  });
+  // Update 2 — the classy action-bar Panic button (👻) triggers the same
+  // action via the 'toggle-panic' IPC channel.
+  globalShortcut.register('Alt+P', togglePanicMode);
 }
 
 // Prefer an app/browser window source over a full-screen capture, because
@@ -148,6 +164,22 @@ ipcMain.on('resize-window', (e, isExpanded) => {
   mainWindow.setSize(700, isExpanded ? 400 : 160);
 });
 
+// Update 1 — freeform resize: the renderer's drag handles send absolute size.
+ipcMain.on('resize-window-free', (e, size) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const width = Math.max(400, Math.round(Number(size && size.width) || 700));
+  const height = Math.max(100, Math.round(Number(size && size.height) || 160));
+  mainWindow.setSize(width, height);
+});
+
+// Update 1 — window opacity slider (30%–100%), clamped to [0.1, 1.0].
+ipcMain.on('set-opacity', (e, opacityValue) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const parsed = parseFloat(opacityValue);
+  const clamped = isNaN(parsed) ? 1.0 : Math.min(1.0, Math.max(0.1, parsed));
+  mainWindow.setOpacity(clamped);
+});
+
 // ---- Click-through (professional rule) ----
 // Default OFF: the overlay can be configured normally.
 // Toggled with Alt+Z. While ON, the window ignores mouse clicks so it never
@@ -173,6 +205,9 @@ ipcMain.on('click-through-control', (e, over) => {
     mainWindow.setIgnoreMouseEvents(true, { forward: true });
   }
 });
+
+// Update 2 — the 👻 Panic button in the action bar (same action as Alt+P).
+ipcMain.on('toggle-panic', togglePanicMode);
 
 app.whenReady().then(createWindow);
 

@@ -52,8 +52,8 @@ Current implementation should focus on Boomi only.
 11. Retrieval and external AI generation should happen in parallel whenever practical.
 12. A missing RAG result must NOT block API-based reasoning.
 13. A weak early answer may be replaced by a stronger answer when new information becomes available.
-14. Every interview turn must be isolated so stale responses cannot overwrite newer questions.
-15. The system should prepare early and finalize only when confidence is sufficient.
+15. Every interview turn must be isolated so stale responses cannot overwrite newer questions.
+16. The system should prepare early and finalize only when confidence is sufficient.
 
 ---
 
@@ -1415,15 +1415,16 @@ The immediate development order is now:
 11. ~~Phase 10 â€” Candidate Response Analysis~~ â†’ DONE: Part 1 (`Alt+V` physical-mic capture â†’ dedicated Deepgram socket â†’ `engine.candidateTranscript`, gated by the `candidateAnalysisEnabled` lock) + Part 2 (`Alt+A` â†’ `engine.analyzeCandidateResponse()` Groq grader vs the last suggested answer â†’ `#scorecard-box` Score + feedback for 8s). See Â§19.
 12. ~~Phase 11 â€” App Packaging (Electron Builder)~~ â†’ DONE: `electron-builder` (`^26.15.3`) dev dependency + `"build": "electron-builder --win --x64"` script + root `"build"` config (`appId: com.boomiboss.interviewengine`, `productName: "Boomi Boss Engine"`, Windows `nsis` target, output `dist/`). `npm run build` produces the installable .exe. **Project READY FOR PRODUCTION.**
 13. ~~Phase 12 â€” Multi-Tier Model Split / Fuzzy RAG / Gemini Failover~~ â†’ DONE: `DEFAULT_CFG.routerMode` (hybrid/rag-only/agent-only) + `fastModel` `llama-3.1-8b-instant`; `_searchLocalScenarios` disabled in agent-only and fuzzy-matching at >= 75% keyword overlap; rag-only never calls an external API (safe fallback on miss); `callWithFallback` in index.html wraps every LLM path with a 500ms TTFT AbortController and automatic Gemini 2.5 Flash failover on 429/timeout.
-14. Build introduction and project answers.
-15. Build the first 100 master scenarios.
-16. Implement lightweight local retrieval.
-17. Connect retrieval to answer generation.
-18. Benchmark model providers.
-19. Optimize latency.
-20. Run real mock interviews.
-21. Add DevOps knowledge later.
-22. UI polish (beyond the Phase 9 teleprompter) last.
+14. ~~Update 1 â€” Stealth Pro UI/UX Overhaul~~ â†’ DONE: status-bar decluttered, SPEAK/THINK badge, glassmorphism `#answer-box`, floating toast scorecard, slide-out shortcuts/settings drawers (opacity + font-size sliders, 8s inactivity auto-close), freeform resize handles, `Alt+H`/`Alt+O` shortcuts, `set-opacity` IPC. Deepgram/Groq/Gemini untouched.
+15. Build introduction and project answers.
+16. Build the first 100 master scenarios.
+17. Implement lightweight local retrieval.
+18. Connect retrieval to answer generation.
+19. Benchmark model providers.
+20. Optimize latency.
+21. Run real mock interviews.
+22. Add DevOps knowledge later.
+23. UI polish (beyond the Phase 9 teleprompter) last.
 
 ---
 

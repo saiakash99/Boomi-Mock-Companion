@@ -1300,8 +1300,9 @@ async function main() {
     await flush();
     assert.strictEqual(mocks.answerCount(), 0, 'no Groq call on local hit');
     assert.ok(finalText.endsWith(scenarioBank[1].answer), 'answer content is the local scenario');
-    const conceptualOpeners = ['To explain that simply,', 'When looking at that concept,', 'There are a few key points there.'];
-    assert.ok(conceptualOpeners.some(o => finalText.startsWith(o)), 'conceptual opener prepended: ' + finalText);
+    // Update 3 — deterministic openers: conceptual always maps to the single
+    // canonical opener (no random pick).
+    assert.ok(finalText.startsWith('The simplest way to look at that is'), 'deterministic conceptual opener prepended: ' + finalText);
   });
 
   await checkAsync('draft path also intercepts local scenarios (no Groq call)', async () => {

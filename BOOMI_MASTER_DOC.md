@@ -120,6 +120,16 @@ A transparent, floating desktop overlay that listens to interviewer questions vi
     *   **`index.html` — failover router:** `callWithFallback` wraps `fastPathCall`, `answerCall`, and `apiCall`. Groq is attempted first (fast tier `llama-3.1-8b-instant` / answer tier `llama-3.3-70b-versatile`) with a **500ms time-to-first-token `AbortController`** timeout (cleared on the first streamed chunk); on HTTP 429 or the TTFT abort it fails over to **Gemini 2.5 Flash** (`generateContent` for JSON, `streamGenerateContent` SSE for answers) using `process.env.GEMINI_API_KEY`. No key / non-429 error → original error rethrown.
     *   **Tests:** 88 engine + 24 diagnostic + 9 audio-pipeline (121 total, 0 failed) — 7 new engine tests for routing/fuzzy/rag-only behavior.
 
+### ✅ Update 1: Stealth Pro UI/UX Overhaul (COMPLETED)
+*   **Goal:** Upgrade the overlay into a commercial-grade teleprompter HUD without touching the audio/LLM pipeline.
+*   **Status:** Done (UI-only — Deepgram WebSocket logic, Groq/Gemini routing, and `engine.js` imports untouched).
+    *   **`index.html` — HUD cleanup & glassmorphism:** long shortcut string removed from the `.status-bar`; `diag-badge`/`click-badge` hidden by default; mode badge re-branded **SCRIPT → SPEAK** / **ARCHITECT → THINK** (live via `Alt+M`); `#answer-box` upgraded to `rgba(15, 23, 42, 0.85)` + `backdrop-filter: blur(12px)`.
+    *   **`index.html` — floating toast scorecard:** `#scorecard-box` is now absolutely positioned (`top:15px; right:15px; z-index:1000`) with a fade in/out transition — it never shifts the answer layout. `Alt+A` floats it for 8s then fades out.
+    *   **`index.html` — slide-out drawers:** `#shortcuts-drawer` (hotkey grid) + `#settings-drawer` (Window Opacity 30–100%, Font Size 14–28px sliders). `toggleDrawer(id)` slides panels via transform; auto-close after 8s of mouse inactivity. Opacity slider → `set-opacity` IPC; font-size slider live-updates `#answer-box`.
+    *   **`index.html` — freeform resize handles:** invisible `e`/`s`/`se` drag zones (`e-resize`/`s-resize`/`se-resize`) that resize the window via the `resize-window-free` IPC (min 400×100).
+    *   **`main.js`:** global shortcuts `Alt+H` (`toggle-shortcuts`) + `Alt+O` (`toggle-settings`); `ipcMain.on('set-opacity')` (clamped 0.1–1.0); `ipcMain.on('resize-window-free')` freeform size.
+    *   **Tests:** 88 engine + 24 diagnostic + 9 audio-pipeline (121 total, 0 failed) — UI-only change, engine unaffected.
+
 ### ⚡ Phase 4 (legacy): Final Polish & Packaging (FUTURE)
 *   **Goal:** Make the app ready for real-world use.
 *   **Tasks:** 

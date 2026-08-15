@@ -16,6 +16,7 @@
     .overlay-card {
       box-sizing: border-box;
       height: 100vh;
+      position: relative; /* anchors floating scorecard, drawers, resize handles */
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -114,7 +115,8 @@
     .answer-wrap {
       flex: 1 1 auto;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      gap: 10px;
       min-height: 0;
       border-top: 1px solid rgba(255, 255, 255, 0.08);
       padding-top: 6px;
@@ -132,9 +134,9 @@
       box-sizing: border-box;
       flex: 1 1 auto;
       min-height: 0;
-      /* Phase 9 — premium teleprompter styling: distraction-free deep-slate
-         card that keeps the candidate's eyes on the answer. */
-      background: rgba(15, 23, 42, 0.95); /* Deep slate */
+      /* Phase 9 + Update 1 — premium teleprompter styling: glassmorphism
+         deep-slate card that keeps the candidate's eyes on the answer. */
+      background: rgba(15, 23, 42, 0.85); /* Deep slate, glassmorphism */
       color: #F8FAFC;
       font-size: 18px;
       line-height: 1.6;
@@ -142,7 +144,8 @@
       border-radius: 12px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       overflow-y: auto;
       scroll-behavior: smooth;
       overflow-wrap: break-word;
@@ -150,6 +153,48 @@
     }
     #answer-box::-webkit-scrollbar { width: 5px; }
     #answer-box::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+
+    /* Update 2 — Classy Action Bar: layout-safe vertical button rail.
+       flex: 0 0 auto keeps it out of the answer's flex space, so it never
+       reflows the teleprompter text while the answer streams in. */
+    #action-bar {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+      -webkit-app-region: no-drag;
+    }
+
+    .action-btn {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px;
+      cursor: pointer;
+      color: #94A3B8;
+      transition: all 0.1s;
+      font-size: 14px;
+      line-height: 1;
+      user-select: none;
+    }
+    .action-btn:hover {
+      color: #F8FAFC;
+      background: rgba(15, 23, 42, 0.85);
+    }
+    .action-btn:active {
+      transform: scale(0.90);
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Update 2 — Seamless Transitions: fade an outgoing answer out instead of
+       hard-clearing it. Must win over the state-based dimming rules above. */
+    .dimmed {
+      opacity: 0.35 !important;
+      transition: opacity 0.3s ease-in-out;
+    }
 
     /* Dim an answer once it is no longer the current one */
     .overlay-card[data-state="SPEECH_ACTIVE"] #answer-box,
@@ -194,6 +239,109 @@
     }
     #text-box::-webkit-scrollbar { width: 4px; }
     #text-box::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+
+    /* Update 1 — Floating Toast Scorecard: absolutely positioned so it NEVER
+       shifts the answer-box layout. Fades in/out via opacity + translate. */
+    #scorecard-box {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 1000;
+      max-width: 300px;
+      background: rgba(15, 23, 42, 0.95);
+      color: #F8FAFC;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border-left: 4px solid #3B82F6;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      font-size: 13px;
+      line-height: 1.45;
+      opacity: 0;
+      transform: translateY(-8px);
+      pointer-events: none;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    #scorecard-box.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #score-accuracy { font-weight: 700; }
+    #score-feedback { color: #CBD5E1; }
+
+    /* Update 1 — Slide-out drawers (hidden by default, translateX off-canvas) */
+    .drawer {
+      position: absolute;
+      top: 40px;
+      right: 14px;
+      z-index: 500;
+      width: 260px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 14px;
+      color: #F8FAFC;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transform: translateX(120%);
+      opacity: 0;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      -webkit-app-region: no-drag;
+    }
+    .drawer.open { transform: translateX(0); opacity: 1; }
+    .drawer-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #94A3B8;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    #shortcuts-drawer .grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 5px 12px;
+      font-size: 12px;
+      align-items: center;
+    }
+    #shortcuts-drawer kbd {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    #shortcuts-drawer span { color: #E2E8F0; }
+
+    #settings-drawer .setting-row { margin-bottom: 12px; }
+    #settings-drawer label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #CBD5E1;
+      margin-bottom: 4px;
+    }
+    #settings-drawer input[type="range"] {
+      width: 100%;
+      accent-color: #38BDF8;
+      cursor: pointer;
+    }
+    #settings-drawer .setting-value {
+      font-weight: 600;
+      color: #F8FAFC;
+    }
+
+    /* Update 1 — Freeform resize handles (invisible drag zones) */
+    .resize-handle { position: absolute; z-index: 900; -webkit-app-region: no-drag; }
+    #resize-se { right: 0; bottom: 0; width: 18px; height: 18px; cursor: se-resize; }
+    #resize-s  { left: 10px; right: 10px; bottom: 0; height: 6px; cursor: s-resize; }
+    #resize-e  { top: 10px; bottom: 10px; right: 0; width: 6px; cursor: e-resize; }
   </style>
 </head>
 <body>
@@ -203,13 +351,10 @@
       <div class="status-left">
         <span id="dot" class="status-indicator"></span>
         <span id="status-text">BOOMI COMPANION • LISTENING</span>
-        <span class="diag-badge on" id="mode-badge" style="background: #3B82F6; margin-right: 8px;">SCRIPT</span>
+        <span class="diag-badge on" id="mode-badge" style="background: #3B82F6; margin-right: 8px;">SPEAK</span>
         <span class="diag-badge on" id="mic-badge" style="background: #EF4444; margin-right: 8px;">MIC: OFF</span>
       </div>
       <div style="display:flex;align-items:center;">
-        <span class="click-badge" id="click-badge">CLICK-THRU</span>
-        <span class="diag-badge" id="diag-badge">DIAGNOSTIC SESSION</span>
-        <span style="font-size: 10px; opacity: 0.7;">Alt+C Clear · Alt+S Pause · Alt+M Mode · Alt+V Mic · Alt+A Analyze · Alt+P Panic · Alt+Z Click</span>
         <span class="close-btn" onclick="closeApp()">✕</span>
       </div>
     </div>
@@ -217,12 +362,50 @@
     <div class="answer-wrap">
       <div class="answer-label" id="answer-label">⟳ preparing…</div>
       <div id="answer-box"><span style="color:#64748B;">Listening for the question…</span></div>
-    </div>
-    <div id="scorecard-box" style="display: none; background: #1E293B; color: #F8FAFC; padding: 15px; border-radius: 8px; margin-top: 10px; border-left: 4px solid #3B82F6;">
-      <strong id="score-accuracy"></strong> <span id="score-feedback"></span>
+      <div id="action-bar">
+        <button class="action-btn" id="btn-pause" title="Pause / Resume (Alt+S)" onclick="runAction('toggle-listen')">⏸️</button>
+        <button class="action-btn" id="btn-clear" title="Clear (Alt+C)" onclick="runAction('clear-text')">🧹</button>
+        <button class="action-btn" id="btn-regen" title="Regenerate (Alt+R)" onclick="runAction('regenerate')">🔄</button>
+        <button class="action-btn" id="btn-mic" title="Candidate Mic (Alt+V)" onclick="runAction('toggle-mic', !candidateMicRunning)">🎤</button>
+        <button class="action-btn" id="btn-panic" title="Click to hide. Press Alt+P to unhide." onclick="ipcRenderer.send('toggle-panic')">👻</button>
+      </div>
     </div>
     <div id="hint"></div>
     <div id="text-box"></div>
+
+    <div id="scorecard-box">
+      <strong id="score-accuracy"></strong> <span id="score-feedback"></span>
+    </div>
+
+    <div id="shortcuts-drawer" class="drawer">
+      <div class="drawer-title">Shortcuts</div>
+      <div class="grid">
+        <kbd>Alt+S</kbd><span>Pause / Resume</span>
+        <kbd>Alt+C</kbd><span>Clear</span>
+        <kbd>Alt+M</kbd><span>Mode (SPEAK / THINK)</span>
+        <kbd>Alt+V</kbd><span>Candidate Mic</span>
+        <kbd>Alt+A</kbd><span>Analyze Answer</span>
+        <kbd>Alt+P</kbd><span>Panic Hide</span>
+        <kbd>Alt+Z</kbd><span>Click-Through</span>
+        <kbd>Alt+X</kbd><span>Window Size</span>
+      </div>
+    </div>
+
+    <div id="settings-drawer" class="drawer">
+      <div class="drawer-title">Settings</div>
+      <div class="setting-row">
+        <label for="opacity-slider">Window Opacity <span class="setting-value" id="opacity-value">100%</span></label>
+        <input type="range" id="opacity-slider" min="30" max="100" value="100">
+      </div>
+      <div class="setting-row">
+        <label for="font-size-slider">Font Size <span class="setting-value" id="font-size-value">18px</span></label>
+        <input type="range" id="font-size-slider" min="14" max="28" value="18">
+      </div>
+    </div>
+
+    <div id="resize-se" class="resize-handle"></div>
+    <div id="resize-s" class="resize-handle"></div>
+    <div id="resize-e" class="resize-handle"></div>
   </div>
 
   <script>
@@ -337,7 +520,7 @@
       [STATES.ANSWER_READY]: 'Answer ready',
       [STATES.WAITING_FOR_MORE]: 'Waiting for more…',
       [STATES.FOLLOW_UP]: 'Follow-up…',
-      [STATES.ERROR]: 'AI error — still listening…',
+      [STATES.ERROR]: 'Listening…',
       [STATES.PAUSED]: 'Paused'
     };
 
@@ -351,11 +534,30 @@
       card.dataset.state = state;
       statusText.innerText = 'BOOMI COMPANION • ' + (STATE_LABELS[state] || state);
       dot.classList.toggle('paused', state === STATES.PAUSED);
-      dot.classList.toggle('error', state === STATES.ERROR);
+      // Update 2 — silent errors: never light the red error dot; the overlay
+      // keeps the friendly "Listening…" label so the interview stays smooth.
+      if (state === STATES.ERROR) {
+        dot.classList.remove('error');
+      } else {
+        dot.classList.toggle('error', state === STATES.ERROR);
+      }
       dot.classList.toggle('busy', BUSY_STATES.includes(state));
       const preparing = BUSY_STATES.includes(state);
       answerLabel.style.display = preparing ? 'block' : 'none';
       if (preparing) answerLabel.innerText = '⟳ preparing…';
+      // Update 2 — seamless transitions: a new question dims the old answer
+      // out instead of hard-clearing it. The first streamed chunk removes the
+      // .dimmed class in renderAnswer().
+      if (state === STATES.QUESTION_BUILDING) {
+        answerBox.classList.add('dimmed');
+      }
+      // Update 2 — silent error masking: on engine failure, gracefully keep
+      // the teleprompter alive with a helpful integration-side fallback line.
+      if (state === STATES.ERROR) {
+        answerBox.classList.remove('dimmed');
+        answerBox.innerHTML = "Let me break that down from the integration side...";
+        answerBox.style.borderLeft = '';
+      }
       renderQuestionLine();
     }
 
@@ -390,20 +592,40 @@
 
     function renderAnswer(answer, provisional) {
       if (!answer) {
+        // Update 2 — seamless transitions: a clear() only dims the outgoing
+        // answer (via .dimmed in runAction) — never hard-empty it here.
+        if (answerBox.classList.contains('dimmed')) return;
         answerBox.innerHTML = '<span style="color:#64748B;">Listening for the question…</span>';
         answerBox.style.borderLeft = ''; // Phase 6 — clear confidence indicator on reset
         return;
       }
+      // First chunk of a new answer: un-dim the box so the fresh stream is
+      // fully readable as it fills the teleprompter.
+      answerBox.classList.remove('dimmed');
       answerBox.innerHTML = escapeHtml(answer);
       // Phase 9 — teleprompter pinning: smoothly scroll the newest answer into
       // the bottom viewable band so the candidate never has to touch the mouse
       // while reading aloud.
-      if (typeof answerBox.scrollTo === 'function') {
-        answerBox.scrollTo({ top: answerBox.scrollHeight, behavior: 'smooth' });
-      } else {
-        answerBox.scrollTop = answerBox.scrollHeight;
+      // Update 2 — smart scrolling: honor manual reads — if the candidate has
+      // scrolled up to re-read a section, stop auto-pinning until they return
+      // to the bottom.
+      if (isAutoScroll) {
+        if (typeof answerBox.scrollTo === 'function') {
+          answerBox.scrollTo({ top: answerBox.scrollHeight, behavior: 'smooth' });
+        } else {
+          answerBox.scrollTop = answerBox.scrollHeight;
+        }
       }
     }
+
+    // Update 2 — smart scrolling: track whether the candidate is pinned to the
+    // bottom of the answer. Scrolling up pauses auto-scroll; returning to the
+    // bottom re-engages it.
+    let isAutoScroll = true;
+    answerBox.addEventListener('scroll', () => {
+      const atBottom = answerBox.scrollTop + answerBox.clientHeight >= answerBox.scrollHeight - 20;
+      isAutoScroll = atBottom;
+    });
 
     function escapeHtml(s) {
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -735,11 +957,22 @@
       return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
     }
 
+    // Update 3 — Provider Circuit Breaker: when Groq trips a rate-limit (429)
+    // we open the breaker for 60s and route every request straight to Gemini,
+    // so the pipeline never hammers a hot API while it cools down.
+    let groqCooldownUntil = 0;
+
     // Phase 12 — Gemini Failover Router: every LLM path (fast, answer, grader)
     // goes through here. Groq is attempted first with a 500ms time-to-first-token
     // timeout; on a 429 rate-limit or the timeout abort, the request automatically
     // fails over to Google Gemini 2.5 Flash (requires GEMINI_API_KEY).
     async function callWithFallback(messages, mode, onChunk) {
+      // Update 3 — provider health state checked FIRST: while the Groq breaker
+      // is open, skip the probe entirely and go straight to Gemini.
+      if (Date.now() < groqCooldownUntil) {
+        console.warn('[Router] Groq is in COOLDOWN. Instantly routing to Gemini.');
+        return await callGemini(messages, mode, onChunk);
+      }
       const controller = new AbortController();
       let ttftTimer = setTimeout(() => controller.abort(), 500);
       // For the streaming answer tier the timer is cleared on the FIRST chunk —
@@ -758,6 +991,12 @@
           const is429 = String(err && err.message || err).indexOf('429') !== -1;
           const isAbort = controller.signal.aborted;
           if (!is429 && !isAbort) throw err; // only fail over on rate-limit or timeout
+          // Update 3 — trip the breaker on a 429 BEFORE failing over, so the
+          // next 60s of requests skip Groq entirely (no repeated hammering).
+          if (is429) {
+            groqCooldownUntil = Date.now() + 60000; // 60 seconds cooldown
+            console.warn('[Router] Groq 429 rate-limited → circuit breaker OPEN for 60s');
+          }
           if (!geminiKey) {
             console.warn('[Router] Groq ' + (isAbort ? 'TTFT timeout' : '429') + ' but GEMINI_API_KEY is not set — no failover');
             throw err;
@@ -900,10 +1139,98 @@
     ipcRenderer.on('session-end', endDiagnosticSession);
 
     // ------------------------------------------------------------
+    // Update 1 — Stealth Pro HUD: slide-out drawers, settings sliders,
+    // floating toast scorecard, and freeform resize handles.
+    // ------------------------------------------------------------
+    const shortcutsDrawer = document.getElementById('shortcuts-drawer');
+    const settingsDrawer = document.getElementById('settings-drawer');
+    const opacitySlider = document.getElementById('opacity-slider');
+    const opacityValue = document.getElementById('opacity-value');
+    const fontSizeSlider = document.getElementById('font-size-slider');
+    const fontSizeValue = document.getElementById('font-size-value');
+
+    let drawerTimer = null;
+
+    function closeDrawers() {
+      shortcutsDrawer.classList.remove('open');
+      settingsDrawer.classList.remove('open');
+      if (drawerTimer) { clearTimeout(drawerTimer); drawerTimer = null; }
+    }
+
+    function toggleDrawer(drawerId) {
+      const drawer = document.getElementById(drawerId);
+      if (!drawer) return;
+      const isOpen = drawer.classList.contains('open');
+      closeDrawers();
+      if (!isOpen) drawer.classList.add('open');
+      if (drawerTimer) clearTimeout(drawerTimer);
+      // Auto-close the drawers after 8 seconds of mouse inactivity.
+      drawerTimer = setTimeout(closeDrawers, 8000);
+    }
+
+    document.addEventListener('mousemove', () => {
+      const anyOpen = shortcutsDrawer.classList.contains('open') || settingsDrawer.classList.contains('open');
+      if (!anyOpen) return;
+      if (drawerTimer) clearTimeout(drawerTimer);
+      drawerTimer = setTimeout(closeDrawers, 8000);
+    });
+
+    // Settings sliders
+    opacitySlider.addEventListener('input', () => {
+      const val = parseInt(opacitySlider.value, 10);
+      opacityValue.innerText = val + '%';
+      ipcRenderer.send('set-opacity', val / 100);
+    });
+
+    fontSizeSlider.addEventListener('input', () => {
+      const val = parseInt(fontSizeSlider.value, 10);
+      fontSizeValue.innerText = val + 'px';
+      answerBox.style.fontSize = val + 'px';
+    });
+
+    // Freeform resize handles: drag any edge/corner to resize the window.
+    function wireResizeHandle(id, mode) {
+      const handle = document.getElementById(id);
+      if (!handle) return;
+      let startX = 0, startY = 0, startW = 700, startH = 160, dragging = false;
+      handle.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        dragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startW = window.innerWidth;
+        startH = window.innerHeight;
+        handle.setPointerCapture(e.pointerId);
+      });
+      handle.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        let w = startW;
+        let h = startH;
+        if (mode.indexOf('e') !== -1) w = Math.max(400, startW + dx);
+        if (mode.indexOf('s') !== -1) h = Math.max(100, startH + dy);
+        ipcRenderer.send('resize-window-free', { width: Math.round(w), height: Math.round(h) });
+      });
+      const endDrag = () => { dragging = false; };
+      handle.addEventListener('pointerup', endDrag);
+      handle.addEventListener('pointercancel', endDrag);
+    }
+    wireResizeHandle('resize-e', 'e');
+    wireResizeHandle('resize-s', 's');
+    wireResizeHandle('resize-se', 'es');
+
+    // ------------------------------------------------------------
     // Hotkeys
     // ------------------------------------------------------------
-    ipcRenderer.on('hotkey', (event, action, payload) => {
+    // Update 2 — shared action dispatcher. Both the global hotkeys (main.js →
+    // 'hotkey' IPC) and the classy action-bar buttons call runAction(), so a
+    // button always does exactly what its Alt-key twin does.
+    function runAction(action, payload) {
       if (action === 'clear-text') {
+        // Update 2 — seamless transitions: dim the old answer out instead of
+        // hard-clearing it. renderAnswer('') keeps the dimmed content intact.
+        answerBox.classList.add('dimmed');
         engine.clear();
         textBox.innerHTML = '';
       } else if (action === 'toggle-listen') {
@@ -924,9 +1251,13 @@
       } else if (action === 'toggle-mode') {
         const newMode = engine.toggleOutputMode();
         const badge = document.getElementById('mode-badge');
-        badge.innerText = newMode.toUpperCase();
+        badge.innerText = newMode === 'architect' ? 'THINK' : 'SPEAK';
         badge.style.background = newMode === 'architect' ? '#F59E0B' : '#3B82F6';
         badge.style.color = newMode === 'architect' ? '#0F172A' : '#FFFFFF';
+      } else if (action === 'toggle-shortcuts') {
+        toggleDrawer('shortcuts-drawer');
+      } else if (action === 'toggle-settings') {
+        toggleDrawer('settings-drawer');
       } else if (action === 'toggle-mic') {
         // Phase 10 Part 1 — Candidate Audio Capture: start/stop the physical
         // microphone and route every Deepgram transcript into the engine's
@@ -957,18 +1288,22 @@
           candidateMicRunning = false;
         }
       } else if (action === 'analyze-candidate') {
-        // Phase 10 Part 2 — Candidate Response Analysis: grade the candidate's
-        // spoken answer against the expected answer and show the scorecard.
+        // Phase 10 Part 2 + Update 1 — Candidate Response Analysis: grade the
+        // candidate's spoken answer and float the scorecard toast (fade-in).
         engine.analyzeCandidateResponse().then(score => {
           if (score) {
             const scorecard = document.getElementById('scorecard-box');
             document.getElementById('score-accuracy').innerText = `Score: ${score.accuracy}`;
             document.getElementById('score-feedback').innerText = `- ${score.feedback}`;
-            scorecard.style.display = 'block';
-            setTimeout(() => { scorecard.style.display = 'none'; }, 8000); // Hide after 8 seconds
+            scorecard.classList.add('show');
+            setTimeout(() => { scorecard.classList.remove('show'); }, 8000); // Fade out after 8 seconds
           }
         });
       }
+    }
+
+    ipcRenderer.on('hotkey', (event, action, payload) => {
+      runAction(action, payload);
     });
 
     function closeApp() {

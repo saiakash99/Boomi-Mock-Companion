@@ -20,3 +20,8 @@ These shortcuts work globally across your entire operating system as long as the
     *   *OFF:* The window can be clicked, dragged, and interacted with.
 *   **`Alt + P`** : **Panic Mode (Stealth Hide).** Instantly drops the overlay's opacity to 0% making it completely invisible on your monitor, while keeping the audio and WebSocket connections running perfectly in the background. Press again to unhide.
 *   **`Alt + X`** : **Toggle Window Size.** Expands or collapses the vertical height of the teleprompter window to read longer answers.
+
+## 🎛️ Stealth Pro HUD Drawers (Update 1)
+*   **`Alt + H`** : **Toggle Shortcuts Drawer.** Slides in/out the hotkey reference panel (top-right). Auto-closes after 8 seconds of mouse inactivity.
+*   **`Alt + O`** : **Toggle Settings Drawer.** Slides in/out the settings panel with Window Opacity (30–100%) and Font Size (14–28px) sliders. Auto-closes after 8 seconds of mouse inactivity.
+*   **Freeform Resize:** invisible drag handles on the right edge, bottom edge, and bottom-right corner let you resize the teleprompter freely (min 400×100).

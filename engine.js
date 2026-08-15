@@ -117,15 +117,20 @@ const DOMAIN_KB = {
 const RAG_ONLY_FALLBACK = "I focus on Boomi integration architecture. Could you clarify your question?";
 
 // ------------------------------------------------------------
+// Update 3 — Deterministic, context-aware openers. A single canonical
+// opener per question type (no randomness) so the candidate always hears
+// the same crisp, confident first line for a given class of question.
+// ------------------------------------------------------------
 const SAFE_OPENERS = {
-  conceptual: ["To explain that simply,", "When looking at that concept,", "There are a few key points there."],
-  experience: ["In my recent projects,", "Based on my experience with that,", "I've handled that a few times."],
-  scenario: ["If I were facing that scenario,", "That's an interesting use case.", "Here is exactly how I would approach that."],
-  troubleshooting: ["When debugging issues like that,", "The first thing I always look at is", "To isolate that specific problem,"],
-  comparison: ["There are a few key differences there.", "When comparing those two approaches,", "They serve different purposes, but generally,"],
-  followup: ["To expand on that,", "Looking a bit deeper into that,", "That's a fair point."],
-  'best-practice': ["The recommended best practice is", "Standard architectural guidelines suggest", "To ensure maximum stability,"],
-  fallback: ["Let me share my thoughts on that.", "Sure, I can speak to that."]
+  conceptual: "The simplest way to look at that is",
+  experience: "In my project, I handled that by",
+  project: "In my project, I handled that by",
+  scenario: "From an architecture perspective, I would",
+  troubleshooting: "The first thing I would check is",
+  comparison: "The main difference is",
+  'best-practice': "The recommended best practice is",
+  followup: "To expand on that,",
+  fallback: "My understanding is"
 };
 
 const QUESTION_STARTERS = [
@@ -1494,11 +1499,12 @@ Return ONLY a valid JSON object with no markdown formatting:
 
   // Shared opener selection (Phase 5) so both the draft and final paths can
   // prepend the same type-matched conversational opener.
+  // Update 3 — deterministic: each question type maps to one canonical opener
+  // (no randomness), falling back to a generic line for unknown types.
   _pickOpener() {
-    const openers = this.openersEnabled
+    return this.openersEnabled
       ? (SAFE_OPENERS[this.type] || SAFE_OPENERS.fallback)
-      : [''];
-    return openers[Math.floor(Math.random() * openers.length)];
+      : '';
   }
 
   async _runFinalAnswer(mode) {

@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: transparent;
+      user-select: none;
+      overflow: hidden;
+    }
+
+    .overlay-card {
+      box-sizing: border-box;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #0F172A;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 10px 14px;
+      color: #F8FAFC;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #94A3B8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      -webkit-app-region: drag;
+      flex: 0 0 auto;
+    }
+
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .status-indicator {
+      flex: 0 0 auto;
+      width: 8px;
+      height: 8px;
+      background-color: #22C55E;
+      border-radius: 50%;
+      transition: background-color 0.2s;
+    }
+    .status-indicator.paused { background-color: #EAB308; }
+    .status-indicator.error { background-color: #EF4444; }
+    .status-indicator.busy { background-color: #38BDF8; }
+
+    .click-badge {
+      display: none;
+      font-size: 9px;
+      font-weight: 700;
+      color: #0F172A;
+      background: #FDE047;
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-left: 8px;
+    }
+    .click-badge.on { display: inline-block; }
+
+    .diag-badge {
+      display: none;
+      font-size: 9px;
+      font-weight: 700;
+      color: #0F172A;
+      background: #A78BFA;
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-left: 8px;
+    }
+    .diag-badge.on { display: inline-block; }
+
+    .close-btn {
+      cursor: pointer;
+      font-size: 14px;
+      color: #94A3B8;
+      margin-left: 10px;
+      font-weight: bold;
+      -webkit-app-region: no-drag;
+    }
+    .close-btn:hover { color: #EF4444; }
+
+    /* MIDDLE: current likely question / interpretation */
+    #question-line {
+      flex: 0 0 auto;
+      font-size: 12px;
+      color: #E2E8F0;
+      min-height: 14px;
+      max-height: 52px;
+      overflow-y: auto;
+      padding-right: 6px;
+      -webkit-app-region: no-drag;
+    }
+    #question-line::-webkit-scrollbar { width: 4px; }
+    #question-line::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+
+    /* PRIMARY: the answer gets most of the space */
+    .answer-wrap {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 6px;
+      -webkit-app-region: no-drag;
+    }
+
+    .answer-label {
+      display: none;
+      font-size: 10px;
+      color: #64748B;
+      margin-bottom: 4px;
+    }
+
+    #answer-box {
+      box-sizing: border-box;
+      flex: 1 1 auto;
+      min-height: 0;
+      /* Phase 9 — premium teleprompter styling: distraction-free deep-slate
+         card that keeps the candidate's eyes on the answer. */
+      background: rgba(15, 23, 42, 0.95); /* Deep slate */
+      color: #F8FAFC;
+      font-size: 18px;
+      line-height: 1.6;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      overflow-wrap: break-word;
+      scrollbar-width: thin;
+    }
+    #answer-box::-webkit-scrollbar { width: 5px; }
+    #answer-box::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+
+    /* Dim an answer once it is no longer the current one */
+    .overlay-card[data-state="SPEECH_ACTIVE"] #answer-box,
+    .overlay-card[data-state="QUESTION_BUILDING"] #answer-box,
+    .overlay-card[data-state="PAUSE_DETECTED"] #answer-box,
+    .overlay-card[data-state="QUESTION_CANDIDATES_READY"] #answer-box,
+    .overlay-card[data-state="QUESTION_BOUNDARY_LIKELY"] #answer-box,
+    .overlay-card[data-state="ANSWER_PREPARING"] #answer-box,
+    .overlay-card[data-state="ANSWERING"] #answer-box,
+    .overlay-card[data-state="WAITING_FOR_MORE"] #answer-box,
+    .overlay-card[data-state="FOLLOW_UP"] #answer-box,
+    .overlay-card[data-state="LISTENING"] #answer-box,
+    .overlay-card[data-state="PAUSED"] #answer-box {
+      opacity: 0.55;
+    }
+
+    /* SECONDARY: hint */
+    #hint {
+      flex: 0 0 auto;
+      color: #38BDF8;
+      font-weight: 600;
+      font-size: 12px;
+      min-height: 16px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      -webkit-app-region: no-drag;
+    }
+
+    /* TRANSCRIPT: compact strip, never dominates */
+    #text-box {
+      flex: 0 0 auto;
+      max-height: 48px;
+      overflow-y: auto;
+      font-size: 11px;
+      color: #94A3B8;
+      line-height: 1.35;
+      padding-right: 6px;
+      mask-image: linear-gradient(to bottom, transparent, black 20%, black 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 100%);
+      -webkit-app-region: no-drag;
+    }
+    #text-box::-webkit-scrollbar { width: 4px; }
+    #text-box::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+  <div class="overlay-card" data-state="LISTENING">
+    <div class="status-bar">
+      <div class="status-left">
+        <span id="dot" class="status-indicator"></span>
+        <span id="status-text">BOOMI COMPANION • LISTENING</span>
+        <span class="diag-badge on" id="mode-badge" style="background: #3B82F6; margin-right: 8px;">SCRIPT</span>
+        <span class="diag-badge on" id="mic-badge" style="background: #EF4444; margin-right: 8px;">MIC: OFF</span>
+      </div>
+      <div style="display:flex;align-items:center;">
+        <span class="click-badge" id="click-badge">CLICK-THRU</span>
+        <span class="diag-badge" id="diag-badge">DIAGNOSTIC SESSION</span>
+        <span style="font-size: 10px; opacity: 0.7;">Alt+C Clear · Alt+S Pause · Alt+M Mode · Alt+V Mic · Alt+A Analyze · Alt+P Panic · Alt+Z Click</span>
+        <span class="close-btn" onclick="closeApp()">✕</span>
+      </div>
+    </div>
+    <div id="question-line"><span style="color:#64748B;">Listening for the question…</span></div>
+    <div class="answer-wrap">
+      <div class="answer-label" id="answer-label">⟳ preparing…</div>
+      <div id="answer-box"><span style="color:#64748B;">Listening for the question…</span></div>
+    </div>
+    <div id="scorecard-box" style="display: none; background: #1E293B; color: #F8FAFC; padding: 15px; border-radius: 8px; margin-top: 10px; border-left: 4px solid #3B82F6;">
+      <strong id="score-accuracy"></strong> <span id="score-feedback"></span>
+    </div>
+    <div id="hint"></div>
+    <div id="text-box"></div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+    const { InterviewEngine, STATES } = require('./engine.js');
+    const { DiagnosticLogger } = require('./diagnostics.js');
+    const { pickSupportedAudioMimeType, buildDeepgramStreamUrl, startCandidateAudio } = require('./audio-pipeline.js');
+
+    const card = document.querySelector('.overlay-card');
+    const statusBar = document.querySelector('.status-bar');
+    const statusText = document.getElementById('status-text');
+    const dot = document.getElementById('dot');
+    const answerBox = document.getElementById('answer-box');
+    const answerLabel = document.getElementById('answer-label');
+    const questionLine = document.getElementById('question-line');
+    const hintEl = document.getElementById('hint');
+    const textBox = document.getElementById('text-box');
+    const clickBadge = document.getElementById('click-badge');
+
+    let isListening = true;
+    let isExpanded = false;
+    let mediaRecorder;
+    let deepgramConnection = null;
+    let groqKey = ''; // Uses your Groq environment key
+    let geminiKey = ''; // Phase 12 — Gemini failover key (optional)
+    let deepgramKey = ''; // Deepgram key cached for the candidate-mic socket
+    let candidateMicRunning = false; // Phase 10: physical-mic analysis active?
+    let candidateMicHandle = null; // { stop } handle from startCandidateAudio
+    let lastChunkLogAt = 0; // throttle for the audio-chunk diagnostic trace
+
+    // Latency measurements (T0..T7, section 31/32)
+    const perf = { t0: 0, t1: 0, t2: 0, t3: 0, t4: 0, t5: 0, t6: 0, t7: 0, turn: '', done: false };
+    function perfMark(name) {
+      if (!perf[name]) perf[name] = Date.now();
+    }
+    function perfReport() {
+      if (perf.done || !perf.t0) return;
+      perf.done = true;
+      const gap = (a, b) => (perf[a] && perf[b]) ? (perf[b] - perf[a]) : null;
+      console.log('[PERF]', JSON.stringify({
+        turn: perf.turn,
+        T1_firstInterim: gap('t0', 't1'),
+        T2_candidate: gap('t0', 't2'),
+        T3_prepStart: gap('t0', 't3'),
+        T4_boundary: gap('t0', 't4'),
+        T5_finalStart: gap('t0', 't5'),
+        T6_firstText: gap('t0', 't6'),
+        T7_complete: gap('t0', 't7'),
+        boundary_to_firstText: gap('t4', 't6'),
+        boundary_to_complete: gap('t4', 't7')
+      }));
+    }
+
+    // Change this variable anytime to switch domains (e.g., "Boomi" or "DevOps")
+    const currentDomain = "Boomi";
+
+    // ------------------------------------------------------------
+    // Phase 2A — Diagnostic session logger (observability only)
+    // Enabled via DEBUG_DIAGNOSTICS=true in .env. Never blocks the
+    // audio/Deepgram/engine pipeline (buffered async writes).
+    // ------------------------------------------------------------
+    const diagState = { enabled: typeof process !== 'undefined' && process.env && process.env.DEBUG_DIAGNOSTICS === 'true' };
+    const diagBadge = document.getElementById('diag-badge');
+
+    function createDiagnosticLogger() {
+      const LoggerMod = require('./diagnostics.js');
+      return new LoggerMod.DiagnosticLogger({
+        enabled: diagState.enabled,
+        verbose: diagState.enabled,
+        dir: (() => {
+          try { return require('path').join(__dirname, 'logs'); } catch (_) { return 'logs'; }
+        })(),
+        domain: currentDomain,
+        mode: 'diagnostic'
+      });
+    }
+
+    let logger = null;
+    function getLogger() {
+      if (!logger) {
+        logger = createDiagnosticLogger();
+        if (diagState.enabled) {
+          logger.start();
+          diagBadge.classList.add('on');
+        }
+      }
+      return logger;
+    }
+
+    // Observation-only trace helper: never allowed to break the pipeline.
+    function diagTrace(eventType, data) {
+      try {
+        const l = getLogger();
+        if (l) l.emit(eventType, data);
+      } catch (_) { /* diagnostics must never interfere with transcript handling */ }
+    }
+
+    // ------------------------------------------------------------
+    // UI state presentation + render helpers (defined before engine
+    // construction because engine.start() fires onState synchronously)
+    // ------------------------------------------------------------
+    const STATE_LABELS = {
+      [STATES.IDLE]: 'Idle',
+      [STATES.LISTENING]: 'Listening…',
+      [STATES.SPEECH_ACTIVE]: 'Listening…',
+      [STATES.QUESTION_BUILDING]: 'Understanding…',
+      [STATES.PAUSE_DETECTED]: 'Pause…',
+      [STATES.QUESTION_CANDIDATES_READY]: 'Interpreting…',
+      [STATES.QUESTION_BOUNDARY_LIKELY]: 'Question boundary…',
+      [STATES.ANSWER_PREPARING]: 'Preparing…',
+      [STATES.ANSWERING]: 'Answering…',
+      [STATES.ANSWER_READY]: 'Answer ready',
+      [STATES.WAITING_FOR_MORE]: 'Waiting for more…',
+      [STATES.FOLLOW_UP]: 'Follow-up…',
+      [STATES.ERROR]: 'AI error — still listening…',
+      [STATES.PAUSED]: 'Paused'
+    };
+
+    const BUSY_STATES = [
+      STATES.SPEECH_ACTIVE, STATES.QUESTION_BUILDING, STATES.PAUSE_DETECTED,
+      STATES.QUESTION_CANDIDATES_READY, STATES.QUESTION_BOUNDARY_LIKELY,
+      STATES.ANSWER_PREPARING, STATES.ANSWERING, STATES.WAITING_FOR_MORE, STATES.FOLLOW_UP
+    ];
+
+    function applyState(state) {
+      card.dataset.state = state;
+      statusText.innerText = 'BOOMI COMPANION • ' + (STATE_LABELS[state] || state);
+      dot.classList.toggle('paused', state === STATES.PAUSED);
+      dot.classList.toggle('error', state === STATES.ERROR);
+      dot.classList.toggle('busy', BUSY_STATES.includes(state));
+      const preparing = BUSY_STATES.includes(state);
+      answerLabel.style.display = preparing ? 'block' : 'none';
+      if (preparing) answerLabel.innerText = '⟳ preparing…';
+      renderQuestionLine();
+    }
+
+    // MIDDLE: current likely question / ranked interpretations (sections 20-22)
+    function renderQuestionLine() {
+      const s = engine.state;
+      let html = '';
+      if (s === STATES.LISTENING || s === STATES.IDLE) {
+        html = '<span style="color:#64748B;">Listening for the question…</span>';
+      } else if (s === STATES.ANSWER_READY || s === STATES.ANSWERING) {
+        html = engine.primary
+          ? '<span style="color:#94A3B8;">' + escapeHtml(engine.primary.text) + '</span>'
+          : '';
+      } else if (s === STATES.WAITING_FOR_MORE) {
+        html = '<span style="color:#F59E0B;">Waiting for more context…</span>';
+      } else if (engine.candidates && engine.candidates.length) {
+        html = engine.candidates.map(c =>
+          '<span style="color:' + (c.priority === 1 ? '#F8FAFC' : '#94A3B8') + ';">P' + c.priority + ': ' +
+          c.confidence + ' — ' + escapeHtml(c.text) + '</span>'
+        ).join('<br>');
+      } else if (engine.topic) {
+        html = '<span style="color:#94A3B8;">Likely area: ' + escapeHtml(engine.topic) + '</span>';
+      } else {
+        html = '<span style="color:#64748B;">Understanding question…</span>';
+      }
+      questionLine.innerHTML = html;
+    }
+
+    function renderHint(hint) {
+      hintEl.innerText = hint ? `💡 ${hint}` : '';
+    }
+
+    function renderAnswer(answer, provisional) {
+      if (!answer) {
+        answerBox.innerHTML = '<span style="color:#64748B;">Listening for the question…</span>';
+        answerBox.style.borderLeft = ''; // Phase 6 — clear confidence indicator on reset
+        return;
+      }
+      answerBox.innerHTML = escapeHtml(answer);
+      // Phase 9 — teleprompter pinning: smoothly scroll the newest answer into
+      // the bottom viewable band so the candidate never has to touch the mouse
+      // while reading aloud.
+      if (typeof answerBox.scrollTo === 'function') {
+        answerBox.scrollTo({ top: answerBox.scrollHeight, behavior: 'smooth' });
+      } else {
+        answerBox.scrollTop = answerBox.scrollHeight;
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ------------------------------------------------------------
+    // Interview engine (pure logic in engine.js)
+    // ------------------------------------------------------------
+    const engine = new InterviewEngine({
+      domain: currentDomain,
+      log: (tag, msg, data) => {
+        const now = Date.now();
+        if (data && data.turnId && data.turnId !== perf.turn) {
+          perf.turn = data.turnId;
+          perf.done = false;
+          perf.t0 = perf.t1 = perf.t2 = perf.t3 = perf.t4 = perf.t5 = perf.t6 = perf.t7 = 0;
+        }
+        if (tag === 'SPEECH_BOUNDARY') perfMark('t4');
+        if (tag === 'FAST_PATH_COMPLETED') { perfMark('t2'); const l = getLogger(); if (l && data && data.turnId) l.perfMark('candidate', data.turnId); }
+        if (tag === 'ANSWER_REQUEST_STARTED') {
+          if (String(msg).indexOf('draft') === 0) perfMark('t3');
+          if (String(msg).indexOf('final') === 0) perfMark('t5');
+        }
+        if (tag === 'INTERIM_TRANSCRIPT' && data && data.words >= 2) perfMark('t1');
+        if (tag === 'ANSWER_REQUEST_COMPLETED' && String(msg).indexOf('final') === 0) { perfMark('t7'); perfReport(); }
+        if (tag === 'ANSWER_PROMOTED') { perfMark('t7'); perfReport(); }
+        if (data !== undefined) console.log(`[ENGINE][${tag}]`, msg, data);
+        else console.log(`[ENGINE][${tag}]`, msg);
+      },
+      diag: (type, data) => {
+        const l = getLogger();
+        if (!l) return;
+        l.emit(type, data);
+        if (data && data.turnId) {
+          if (type === 'TRANSCRIPT_INTERIM' && data.wordCount >= 2) l.perfMark('firstInterim', data.turnId);
+          else if (type === 'BOUNDARY_CANDIDATE') l.perfMark('boundary', data.turnId);
+          else if (type === 'QUESTION_SNAPSHOT_CREATED') l.perfMark('snapshot', data.turnId);
+        }
+      },
+      onState: (state) => applyState(state),
+      onHint: (hint) => renderHint(hint),
+      onCandidates: () => renderQuestionLine(),
+      onAnswer: (res) => {
+        if (res.text) {
+          if (res.provisional) perfMark('t6');
+          if (!res.provisional) { perfMark('t7'); perfReport(); }
+        }
+        // Phase 6 — Confidence Scoring: color the answer-box left border with the
+        // turn's Green/Yellow/Red boundary confidence indicator.
+        if (res.confidence === 'green') answerBox.style.borderLeft = '4px solid #10B981';
+        else if (res.confidence === 'yellow') answerBox.style.borderLeft = '4px solid #F59E0B';
+        else if (res.confidence === 'red') answerBox.style.borderLeft = '4px solid #EF4444';
+        renderAnswer(res.text, res.provisional);
+      },
+      fastPathCall: (messages) => callWithFallback(messages, true),
+      answerCall: (messages, mode, onChunk) => callWithFallback(messages, false, onChunk),
+      apiCall: (messages) => callWithFallback(messages, true)
+    });
+    engine.start();
+
+    // ------------------------------------------------------------
+    // Audio capture + Deepgram (UNCHANGED — do not modify)
+    // ------------------------------------------------------------
+    async function connectDeepgram() {
+      try {
+        const env = await ipcRenderer.invoke('get-env');
+        const apiKey = env.deepgram;
+        groqKey = env.groq;
+        geminiKey = env.gemini; // Phase 12 — Gemini failover key (may be empty)
+        deepgramKey = apiKey; // cached for the candidate-mic WebSocket
+
+        if (env.diagnostics !== undefined) diagState.enabled = !!env.diagnostics;
+
+        if (!groqKey) {
+          hintEl.innerText = '⚠️ Groq API Key missing in environment!';
+          return;
+        }
+
+        if (!apiKey) {
+          throw new Error('DEEPGRAM_API_KEY not found in environment');
+        }
+
+        const captureMimeType = pickSupportedAudioMimeType() || 'audio/webm;codecs=opus';
+        const wsUrl = buildDeepgramStreamUrl({
+          model: 'nova-3',
+          smartFormat: true,
+          keepalive: true,
+          interimResults: true,
+          endpointing: 300,
+          vadEvents: true
+        });
+        deepgramConnection = new WebSocket(wsUrl, ['token', apiKey]);
+        getLogger().emit('DEEPGRAM_CONNECTING', { mimeType: captureMimeType, model: 'nova-3' });
+
+        deepgramConnection.onopen = () => {
+          console.log("[AUDIO_CONNECTED]", "Deepgram WebSocket Live Connection Opened");
+          getLogger().emit('DEEPGRAM_CONNECTED', { model: 'nova-3' });
+        };
+
+        deepgramConnection.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            console.log("[Deepgram message]", msg.type, msg.is_final, msg.speech_final, msg);
+
+            if (msg.type === "Results") {
+              const transcript = msg.channel?.alternatives[0]?.transcript || '';
+              const isFinal = msg.is_final;
+              const speechFinal = !!msg.speech_final;
+
+              // UI FIRST — the popup transcript strip mirrors the raw Deepgram
+              // text on every Results frame (interim + final) and must never
+              // depend on the question/turn engine or the diagnostic logger.
+              // renderTranscript falls back to the engine's latest interim.
+              if (isListening) {
+                renderTranscript(transcript, isFinal);
+                textBox.scrollTop = textBox.scrollHeight;
+              }
+
+              if (transcript && transcript.trim().length > 0) {
+                diagTrace('TRANSCRIPT_RECEIVED_FROM_DEEPGRAM', {
+                  transcript: transcript,
+                  transcriptLength: transcript.length,
+                  isFinal: !!isFinal,
+                  speechFinal: speechFinal
+                });
+
+                diagTrace('TRANSCRIPT_SENT_TO_UI', {
+                  transcript: transcript,
+                  transcriptLength: transcript.length,
+                  isFinal: !!isFinal,
+                  speechFinal: speechFinal,
+                  turnId: engine.turnId || ''
+                });
+
+                engine.processTranscript(transcript, isFinal, speechFinal);
+                diagTrace('TRANSCRIPT_SENT_TO_ENGINE', {
+                  transcript: transcript,
+                  transcriptLength: transcript.length,
+                  isFinal: !!isFinal,
+                  speechFinal: speechFinal,
+                  turnId: engine.turnId || ''
+                });
+              }
+              // speech_final=true marks a real utterance boundary (unlike is_final alone)
+              if (speechFinal) engine.handleSpeechBoundary('speech_final');
+            }
+
+            if (msg.type === "UtteranceEnd") {
+              engine.handleSpeechBoundary('utterance_end');
+            }
+
+            if (msg.type === "SpeechStarted") {
+              perfMark('t0');
+              const l = getLogger();
+              if (l) l.perfMark('firstAudio', engine.turnId || undefined);
+            }
+
+            if (msg.type === "Error") {
+              console.error("Deepgram API Error:", msg);
+              getLogger().emit('DEEPGRAM_ERROR', { error: String(msg && msg.err_msg || 'deepgram_api_error'), source: 'api' });
+            }
+          } catch (err) {
+            console.error("Error parsing Deepgram message:", err);
+            getLogger().emit('DEEPGRAM_ERROR', { error: String(err && err.message || err), source: 'parse' });
+          }
+        };
+
+        deepgramConnection.onerror = (err) => {
+          console.error('Deepgram Error:', err);
+          getLogger().emit('DEEPGRAM_ERROR', { error: String(err && err.message || err), source: 'socket' });
+          deepgramConnection.close();
+        };
+
+        deepgramConnection.onclose = () => {
+          console.log('Deepgram connection closed. Reconnecting in 2s...');
+          getLogger().emit('DEEPGRAM_DISCONNECTED', { reconnectDelayMs: 2000 });
+          getLogger().emit('DEEPGRAM_RECONNECTING', { delayMs: 2000 });
+          setTimeout(connectDeepgram, 2000);
+        };
+      } catch (err) {
+        console.error("Failed to connect to Deepgram:", err);
+        getLogger().emit('DEEPGRAM_ERROR', { error: String(err && err.message || err), source: 'connect' });
+      }
+    }
+
+    async function startAudioCapture() {
+      try {
+        const getDesktopAudioStream = async () => {
+          if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+            try {
+              const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: {
+                  frameRate: 30,
+                  cursor: 'always'
+                },
+                audio: {
+                  // Phase 8 — Audio Noise Gating: request native WebRTC audio
+                  // processing on the system-audio track before it reaches the
+                  // MediaRecorder / Deepgram WebSocket.
+                  echoCancellation: true,
+                  noiseSuppression: true,
+                  autoGainControl: true
+                }
+              });
+              return stream;
+            } catch (err) {
+              // Fall through to the desktop source fallback below instead of
+              // leaving an unhandled rejection that silently kills capture.
+              console.warn('[Audio] getDisplayMedia failed, falling back to desktop source:', err);
+            }
+          }
+
+          const sourceId = await ipcRenderer.invoke('get-desktop-source');
+          if (!sourceId) {
+            throw new Error('No desktop audio source was found.');
+          }
+
+          const constraints = {
+            audio: {
+              mandatory: {
+                chromeMediaSource: 'desktop',
+                chromeMediaSourceId: sourceId
+              },
+              // Phase 8 — Audio Noise Gating: Chromium does NOT permit
+              // echoCancellation/noiseSuppression/autoGainControl inside
+              // `mandatory` for a desktop source (OverconstrainedError), so the
+              // processing requests live in the `optional` array — applied when
+              // the platform supports them, ignored otherwise.
+              optional: [
+                { echoCancellation: true },
+                { noiseSuppression: true },
+                { autoGainControl: true }
+              ]
+            },
+            video: {
+              mandatory: {
+                chromeMediaSource: 'desktop',
+                chromeMediaSourceId: sourceId
+              }
+            }
+          };
+
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            return navigator.mediaDevices.getUserMedia(constraints);
+          }
+
+          if (navigator.webkitGetUserMedia) {
+            return new Promise((resolve, reject) => {
+              navigator.webkitGetUserMedia(constraints, resolve, reject);
+            });
+          }
+
+          return Promise.reject(new Error('Desktop audio capture is not supported in this environment.'));
+        };
+
+        const stream = await getDesktopAudioStream();
+        const audioTrack = stream.getAudioTracks()[0];
+
+        if (!audioTrack) {
+          throw new Error('No desktop audio track was returned.');
+        }
+
+        const trackSettings = audioTrack.getSettings ? audioTrack.getSettings() : {};
+        const sampleRate = trackSettings.sampleRate || 48000;
+        const mimeType = pickSupportedAudioMimeType() || 'audio/webm;codecs=opus';
+
+        getLogger().emit('AUDIO_STARTED', { sampleRate, mimeType });
+
+        const audioStream = new MediaStream([audioTrack]);
+        mediaRecorder = new MediaRecorder(audioStream, mimeType ? { mimeType } : undefined);
+        if (mediaRecorder && typeof mediaRecorder.start === 'function') {
+          getLogger().emit('MEDIARECORDER_CREATED', { mimeType, sampleRate, trackCount: audioStream.getAudioTracks().length, state: mediaRecorder.state || 'new' });
+        }
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0 && isListening) {
+            console.log('[Audio] Sending chunk size:', event.data.size);
+            if (deepgramConnection && deepgramConnection.readyState === WebSocket.OPEN) {
+              deepgramConnection.send(event.data);
+              if (Date.now() - lastChunkLogAt > 2000) {
+                lastChunkLogAt = Date.now();
+                diagTrace('AUDIO_CHUNK_SENT', { size: event.data.size, socketState: deepgramConnection.readyState });
+              }
+            } else {
+              diagTrace('AUDIO_CHUNK_SKIPPED', {
+                size: event.data.size,
+                socketState: deepgramConnection ? deepgramConnection.readyState : -1,
+                reason: 'deepgram_socket_not_open'
+              });
+            }
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          console.log('[mediaRecorder] stopped');
+        };
+
+        mediaRecorder.start(250);
+        getLogger().emit('MEDIARECORDER_STARTED', { mimeType, sampleRate, state: mediaRecorder.state || 'recording' });
+      } catch (e) {
+        console.error('Audio capture error:', e);
+        getLogger().emit('AUDIO_ERROR', { error: String(e && e.message || e) });
+      }
+    }
+
+    // Phase 12 — Multi-Tier Model Split: the fast tier (mode === true) uses the
+    // lightweight `llama-3.1-8b-instant` for cheap, low-latency classification;
+    // the answer tier (mode !== true) uses the full `llama-3.3-70b-versatile`.
+    async function callGroq(messages, mode, onChunk, signal) {
+      const isFast = mode === true;
+      const body = {
+        model: isFast ? 'llama-3.1-8b-instant' : 'llama-3.3-70b-versatile',
+        messages,
+        temperature: 0.35,
+        ...(isFast ? { response_format: { type: 'json_object' } } : {})
+      };
+      // Buffered streaming (section 29): stream answer tokens but the engine
+      // only renders coherent clause-level chunks, never half words.
+      if (!isFast && typeof onChunk === 'function') body.stream = true;
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+        body: JSON.stringify(body),
+        signal
+      });
+      if (!res.ok) throw new Error(`Groq API ${res.status} ${res.statusText}`);
+      if (!isFast && typeof onChunk === 'function') return await readStream(res, onChunk);
+      const data = await res.json();
+      return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+    }
+
+    // Phase 12 — Gemini Failover Router: every LLM path (fast, answer, grader)
+    // goes through here. Groq is attempted first with a 500ms time-to-first-token
+    // timeout; on a 429 rate-limit or the timeout abort, the request automatically
+    // fails over to Google Gemini 2.5 Flash (requires GEMINI_API_KEY).
+    async function callWithFallback(messages, mode, onChunk) {
+      const controller = new AbortController();
+      let ttftTimer = setTimeout(() => controller.abort(), 500);
+      // For the streaming answer tier the timer is cleared on the FIRST chunk —
+      // the 500ms budget only covers time-to-first-token, not the whole stream.
+      const wrappedChunk = typeof onChunk === 'function' ? (chunk) => {
+        if (ttftTimer) { clearTimeout(ttftTimer); ttftTimer = null; }
+        onChunk(chunk);
+      } : undefined;
+      try {
+        try {
+          const result = await callGroq(messages, mode, wrappedChunk, controller.signal);
+          if (ttftTimer) { clearTimeout(ttftTimer); ttftTimer = null; }
+          return result;
+        } catch (err) {
+          if (ttftTimer) { clearTimeout(ttftTimer); ttftTimer = null; }
+          const is429 = String(err && err.message || err).indexOf('429') !== -1;
+          const isAbort = controller.signal.aborted;
+          if (!is429 && !isAbort) throw err; // only fail over on rate-limit or timeout
+          if (!geminiKey) {
+            console.warn('[Router] Groq ' + (isAbort ? 'TTFT timeout' : '429') + ' but GEMINI_API_KEY is not set — no failover');
+            throw err;
+          }
+          console.warn('[Router] Groq ' + (isAbort ? 'TTFT timeout' : '429 rate-limited') + ' → failing over to Gemini 2.5 Flash');
+          return await callGemini(messages, mode, onChunk);
+        }
+      } finally {
+        if (ttftTimer) { clearTimeout(ttftTimer); ttftTimer = null; }
+      }
+    }
+
+    // Phase 12 — Google Gemini 2.5 Flash. Mirrors Groq's streaming contract:
+    // returns the full text (calling onChunk for the answer tier), or the plain
+    // content string for the JSON fast tier.
+    async function callGemini(messages, mode, onChunk) {
+      const isFast = mode === true;
+      const systemText = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
+      const contents = messages.filter(m => m.role !== 'system').map(m => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }]
+      }));
+      const body = {
+        contents,
+        ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
+        generationConfig: {
+          temperature: 0.35,
+          ...(isFast ? { responseMimeType: 'application/json' } : {})
+        }
+      };
+      const key = geminiKey;
+      const endpoint = isFast
+        ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`
+        : `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error(`Gemini API ${res.status} ${res.statusText}`);
+      if (isFast) {
+        const data = await res.json();
+        return (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts || [])
+          .map(p => p.text || '').join('');
+      }
+      return await readGeminiStream(res, onChunk);
+    }
+
+    async function readGeminiStream(res, onChunk) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let full = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          const t = line.trim();
+          if (!t.startsWith('data:')) continue;
+          const payload = t.slice(5).trim();
+          if (!payload || payload === '[DONE]') continue;
+          try {
+            const json = JSON.parse(payload);
+            const text = (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts || [])
+              .map(p => p.text || '').join('');
+            if (text) { full += text; if (onChunk) onChunk(full); }
+          } catch (_) { /* ignore malformed chunk */ }
+        }
+      }
+      return full;
+    }
+
+    async function readStream(res, onChunk) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let full = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          const t = line.trim();
+          if (!t.startsWith('data:')) continue;
+          const payload = t.slice(5).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            const json = JSON.parse(payload);
+            const delta = json.choices && json.choices[0] && json.choices[0].delta;
+            const piece = (delta && (delta.content || '')) || '';
+            if (piece) { full += piece; onChunk(full); }
+          } catch (_) { /* ignore malformed chunk */ }
+        }
+      }
+      return full;
+    }
+
+    // ------------------------------------------------------------
+    // Transcript strip (secondary, never dominates the answer).
+    // Shows only the current utterance being understood — the raw
+    // transcript history lives in the dev logs, not the overlay.
+    // ------------------------------------------------------------
+    function renderTranscript(text, isFinal) {
+      const live = text || engine.latestInterim || engine.questionBuffer;
+      const html = '<div><span style="color:#64748B;">Hearing:</span> "' + escapeHtml(live) + '"</div>';
+      textBox.innerHTML = html;
+      textBox.scrollTop = textBox.scrollHeight;
+    }
+
+    // ------------------------------------------------------------
+    // Transcript -> engine (handles states / fast path / answers)
+    // ------------------------------------------------------------
+    // engine.processTranscript is called directly from the Deepgram onmessage handler above.
+
+    let audioSessionStarted = false;
+    function beginAudioSession() {
+      if (audioSessionStarted) return;
+      audioSessionStarted = true;
+      connectDeepgram();
+      startAudioCapture();
+    }
+
+    // Auto-start on load: the overlay is launched with showInactive() +
+    // skipTaskbar (main.js) so it never receives pointer/key events that would
+    // otherwise gate the audio pipeline. Start immediately instead.
+    beginAudioSession();
+
+    // ------------------------------------------------------------
+    // Phase 2A: finalize the diagnostic session (flush summary + footer).
+    // ------------------------------------------------------------
+    function endDiagnosticSession() {
+      if (logger) logger.end();
+    }
+    window.addEventListener('beforeunload', endDiagnosticSession);
+    ipcRenderer.on('session-end', endDiagnosticSession);
+
+    // ------------------------------------------------------------
+    // Hotkeys
+    // ------------------------------------------------------------
+    ipcRenderer.on('hotkey', (event, action, payload) => {
+      if (action === 'clear-text') {
+        engine.clear();
+        textBox.innerHTML = '';
+      } else if (action === 'toggle-listen') {
+        isListening = !isListening;
+        if (isListening) {
+          engine.resume();
+        } else {
+          engine.pause();
+        }
+      } else if (action === 'regenerate') {
+        engine.regenerate();
+      } else if (action === 'toggle-size') {
+        isExpanded = !isExpanded;
+        ipcRenderer.send('resize-window', isExpanded);
+        textBox.style.maxHeight = isExpanded ? '130px' : '48px';
+      } else if (action === 'toggle-clickthrough') {
+        setClickThrough(!clickThrough);
+      } else if (action === 'toggle-mode') {
+        const newMode = engine.toggleOutputMode();
+        const badge = document.getElementById('mode-badge');
+        badge.innerText = newMode.toUpperCase();
+        badge.style.background = newMode === 'architect' ? '#F59E0B' : '#3B82F6';
+        badge.style.color = newMode === 'architect' ? '#0F172A' : '#FFFFFF';
+      } else if (action === 'toggle-mic') {
+        // Phase 10 Part 1 — Candidate Audio Capture: start/stop the physical
+        // microphone and route every Deepgram transcript into the engine's
+        // candidateTranscript buffer (gated by the candidateAnalysisEnabled lock).
+        engine.candidateAnalysisEnabled = payload;
+        const badge = document.getElementById('mic-badge');
+        badge.innerText = payload ? 'MIC: ON' : 'MIC: OFF';
+        badge.style.background = payload ? '#10B981' : '#EF4444';
+
+        if (payload) {
+          if (!candidateMicRunning) {
+            startCandidateAudio(
+              (text) => engine.handleCandidateText(text),
+              { apiKey: deepgramKey }
+            ).then((handle) => {
+              candidateMicHandle = handle;
+              candidateMicRunning = true;
+            }).catch((err) => {
+              console.error('[Mic] Candidate audio capture failed:', err);
+              engine.candidateAnalysisEnabled = false;
+              badge.innerText = 'MIC: ERR';
+              badge.style.background = '#EF4444';
+            });
+          }
+        } else if (candidateMicRunning && candidateMicHandle && typeof candidateMicHandle.stop === 'function') {
+          candidateMicHandle.stop();
+          candidateMicHandle = null;
+          candidateMicRunning = false;
+        }
+      } else if (action === 'analyze-candidate') {
+        // Phase 10 Part 2 — Candidate Response Analysis: grade the candidate's
+        // spoken answer against the expected answer and show the scorecard.
+        engine.analyzeCandidateResponse().then(score => {
+          if (score) {
+            const scorecard = document.getElementById('scorecard-box');
+            document.getElementById('score-accuracy').innerText = `Score: ${score.accuracy}`;
+            document.getElementById('score-feedback').innerText = `- ${score.feedback}`;
+            scorecard.style.display = 'block';
+            setTimeout(() => { scorecard.style.display = 'none'; }, 8000); // Hide after 8 seconds
+          }
+        });
+      }
+    });
+
+    function closeApp() {
+      ipcRenderer.send('close-app');
+    }
+
+    // ------------------------------------------------------------
+    // Click-through (professional rule: mostly click-through while in an
+    // interview, but the header strip becomes interactive on hover so the
+    // window can always be dragged / closed / configured.)
+    // ------------------------------------------------------------
+    let clickThrough = false;
+    let lastOver = false;
+
+    function setClickThrough(enabled) {
+      clickThrough = enabled;
+      clickBadge.classList.toggle('on', enabled);
+      ipcRenderer.send('click-through-set', enabled);
+      lastOver = false;
+    }
+
+    document.addEventListener('mousemove', (e) => {
+      if (!clickThrough) return;
+      const rect = statusBar.getBoundingClientRect();
+      const over = e.clientY <= rect.bottom + 4;
+      if (over !== lastOver) {
+        lastOver = over;
+        ipcRenderer.send('click-through-control', over);
+      }
+    });
+  </script>
+</body>
+</html>

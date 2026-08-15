@@ -1,0 +1,32 @@
+{
+  "name": "boomi-mock-companion",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64",
+    "test": "node test/engine.test.js && node test/diagnostics.test.js && node test/audio-pipeline.test.js"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "@deepgram/sdk": "^5.8.0",
+    "dotenv": "^17.4.2"
+  },
+  "build": {
+    "appId": "com.boomiboss.interviewengine",
+    "productName": "Boomi Boss Engine",
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "directories": {
+      "output": "dist"
+    }
+  }
+}

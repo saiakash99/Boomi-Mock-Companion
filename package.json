@@ -5,7 +5,9 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win --x64",
-    "test": "node test/engine.test.js && node test/diagnostics.test.js && node test/audio-pipeline.test.js"
+    "generate-logo": "node scripts/generate-logo.js",
+    "test": "node test/engine.test.js && node test/diagnostics.test.js && node test/audio-pipeline.test.js && node test/provider-router.test.js",
+    "test:chaos": "node test/chaos-simulator.js"
   },
   "devDependencies": {
     "electron": "^30.0.0",
@@ -17,9 +19,10 @@
   },
   "build": {
     "appId": "com.boomiboss.interviewengine",
-    "productName": "Boomi Boss Engine",
+    "productName": "Boomi Companion",
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "assets/logo.ico"
     },
     "nsis": {
       "oneClick": false,

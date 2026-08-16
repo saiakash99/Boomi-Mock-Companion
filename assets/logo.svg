@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="badge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1E4A48"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="248" height="248" rx="56" fill="url(#badge)"/>
+  <g transform="rotate(28.6 128 128)">
+    <ellipse cx="128" cy="128" rx="84" ry="46" fill="none"
+             stroke="#5EEAD4" stroke-width="7"/>
+    <circle cx="150.1" cy="168.4" r="9" fill="#F1F5F9"/>
+  <circle cx="53.1" cy="142.7" r="9" fill="#F1F5F9"/>
+  <circle cx="180.8" cy="72.9" r="9" fill="#F1F5F9"/>
+  </g>
+  <circle cx="128" cy="128" r="15" fill="#F8FAFC"/>
+</svg>

@@ -1,9 +1,12 @@
 require('dotenv').config();
 const { app, BrowserWindow, globalShortcut, screen, ipcMain, desktopCapturer } = require('electron');
 
-// Transparent + frameless windows can paint as fully invisible on Windows
-// when hardware acceleration is enabled (especially combined with CSS
-// backdrop-filter). Disabling it keeps the overlay reliably visible.
+// Update 4 — Pro-Level Teleprompter v2 renders TRUE glassmorphism in the
+// renderer: the overlay-card paints `rgba(15,23,42,--bg-alpha)` + blur over
+// whatever sits behind the window, so the BrowserWindow must be fully
+// transparent. Transparent + frameless windows can paint as fully invisible on
+// Windows when hardware acceleration is enabled (especially combined with CSS
+// backdrop-filter), so it stays disabled to keep the overlay reliably visible.
 app.disableHardwareAcceleration();
 
 let mainWindow;
@@ -42,23 +45,34 @@ function createWindow() {
 
   mainWindow = new BrowserWindow({
     width: 700,
-    height: 160,
+    // Update — taller default startup height (640px) matching the expanded
+    // Alt+X state so the teleprompter has a big reading area from launch.
+    height: 640, // was 380
     x: Math.round((width - 700) / 2),
     y: 10,
     frame: false,
-    // transparent windows can fail to composite on Windows (invisible overlay);
-    // use an opaque window whose bg matches the card so the overlay always shows.
-    transparent: false,
-    backgroundColor: '#0F172A',
+    // Update 4 — fully transparent, frameless window so the renderer's
+    // rgba(--bg-alpha) glass card + backdrop blur composite over the desktop
+    // (no black flash behind the rounded corners).
+    transparent: true,
+    backgroundColor: '#00000000',
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: true,
-    minWidth: 400,
-    minHeight: 100,
+    // Update — lowered to 300 so the HUD "Minimize to mini-overlay" action
+    // (➖) can shrink the window to its 300×150 mini state via setSize().
+    minWidth: 300,
+    minHeight: 150,
     show: false, // avoid focus stealing on launch
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      // Update 4 — the overlay is launched with showInactive() and never gains
+      // focus (also supports click-through mode). Without this, Chromium treats
+      // the unfocused window as backgrounded and throttles renderer timers +
+      // media to ~1s granularity, which stalls the Deepgram STT feed and the
+      // streamed text rendering inside the popup. Keep the renderer fully awake.
+      backgroundThrottling: false
     }
   });
 
@@ -146,7 +160,7 @@ ipcMain.handle('get-desktop-source', async () => {
 });
 
 // Securely provide API key to renderer
-ipcMain.handle('get-env', () => ({ deepgram: process.env.DEEPGRAM_API_KEY, gemini: process.env.GEMINI_API_KEY, groq: process.env.GROQ_API_KEY, diagnostics: process.env.DEBUG_DIAGNOSTICS === 'true' }));
+ipcMain.handle('get-env', () => ({ deepgram: process.env.DEEPGRAM_API_KEY, gemini: process.env.GEMINI_API_KEY, groq: process.env.GROQ_API_KEY, diagnostics: process.env.DEBUG_DIAGNOSTICS === 'true', diagnosticsPrivacy: process.env.DIAGNOSTICS_PRIVACY || 'debug' }));
 
 // Phase 2A: ask the renderer to finalize its diagnostic session before quitting
 app.on('before-quit', () => {
@@ -161,18 +175,21 @@ ipcMain.on('close-app', () => {
 
 ipcMain.on('resize-window', (e, isExpanded) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  mainWindow.setSize(700, isExpanded ? 400 : 160);
+  // Update — expanded state now matches the taller default startup height.
+  mainWindow.setSize(700, isExpanded ? 640 : 380);
 });
 
 // Update 1 — freeform resize: the renderer's drag handles send absolute size.
 ipcMain.on('resize-window-free', (e, size) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const width = Math.max(400, Math.round(Number(size && size.width) || 700));
-  const height = Math.max(100, Math.round(Number(size && size.height) || 160));
+  const height = Math.max(150, Math.round(Number(size && size.height) || 380));
   mainWindow.setSize(width, height);
 });
 
-// Update 1 — window opacity slider (30%–100%), clamped to [0.1, 1.0].
+// Update 1 — window opacity IPC. Retained for backward compatibility /
+// external callers; the Update 4 Settings Glass Opacity slider now drives the
+// renderer's `--bg-alpha` CSS variable instead (clamped to [0.1, 1.0]).
 ipcMain.on('set-opacity', (e, opacityValue) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const parsed = parseFloat(opacityValue);
@@ -208,6 +225,43 @@ ipcMain.on('click-through-control', (e, over) => {
 
 // Update 2 — the 👻 Panic button in the action bar (same action as Alt+P).
 ipcMain.on('toggle-panic', togglePanicMode);
+
+// ------------------------------------------------------------
+// Update — HUD Window Controls & Split Screen. Tiny emoji-style buttons in the
+// renderer's top-right control bar drive the prompter layout live during an
+// interview. Bounds are computed dynamically from the current display — never
+// hard-coded — so the prompter sits flush next to MS Teams/Zoom on any setup.
+// ------------------------------------------------------------
+
+// ➖ — Minimize to a compact mini-overlay, always floating on top.
+ipcMain.on('window-minimize', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.setSize(300, 150);
+  mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+});
+
+// 🗗 — Maximize to the full work area.
+ipcMain.on('window-maximize', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.maximize();
+});
+
+// 🗖 — Snap to exactly 50% of the current display's work area on the right
+// (toggles to the left half on a second press) so the prompter sits beside
+// MS Teams/Zoom without overlapping it.
+ipcMain.on('window-split', (e, requestedSide) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const display = screen.getDisplayMatching(mainWindow.getBounds());
+  const wa = display.workArea;
+  const width = Math.round(wa.width / 2);
+  const bounds = mainWindow.getBounds();
+  const onRightHalf = bounds.x >= wa.x + width;
+  let side = requestedSide;
+  if (side !== 'left' && side !== 'right') side = onRightHalf ? 'left' : 'right';
+  const x = side === 'left' ? wa.x : (wa.x + wa.width - width);
+  mainWindow.setBounds({ x, y: wa.y, width, height: wa.height });
+  mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+});
 
 app.whenReady().then(createWindow);
 

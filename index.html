@@ -3,6 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <style>
+    :root {
+      /* Update 4 — Pro-Level Teleprompter v2: the glass background is driven by
+         a CSS variable (Settings → Glass Opacity slider, 0.30–1.00) and text
+         stays fully opaque. Font scale lets A− / A+ adjust the clamp base.
+         Update — default glass alpha reduced ~20% (0.90 → 0.70) for a more
+         translucent, less intrusive overlay. */
+      --bg-alpha: 0.70;
+      --font-scale: 1;
+    }
+
     html, body {
       margin: 0;
       padding: 0;
@@ -16,11 +26,15 @@
     .overlay-card {
       box-sizing: border-box;
       height: 100vh;
-      position: relative; /* anchors floating scorecard, drawers, resize handles */
+      position: relative; /* anchors floating pill, follow btn, drawers, resize handles */
       display: flex;
       flex-direction: column;
       gap: 6px;
-      background: #0F172A;
+      /* Update 4 — True Glassmorphism: translucent card via --bg-alpha (never a
+         full-window fade). Text always renders 100% opaque. */
+      background: rgba(15, 23, 42, var(--bg-alpha, 0.90));
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 12px;
       padding: 10px 14px;
@@ -50,6 +64,27 @@
       white-space: nowrap;
       text-overflow: ellipsis;
     }
+
+    .status-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      -webkit-app-region: no-drag;
+    }
+
+    .header-btn {
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      color: #94A3B8;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      padding: 2px 9px;
+      line-height: 1.4;
+      -webkit-app-region: no-drag;
+    }
+    .header-btn:hover { color: #F8FAFC; background: rgba(255, 255, 255, 0.14); }
 
     .status-indicator {
       flex: 0 0 auto;
@@ -89,9 +124,9 @@
 
     .close-btn {
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13px;
       color: #94A3B8;
-      margin-left: 10px;
+      margin-left: 6px;
       font-weight: bold;
       -webkit-app-region: no-drag;
     }
@@ -99,13 +134,15 @@
 
     /* MIDDLE: current likely question / interpretation */
     #question-line {
-      flex: 0 0 auto;
-      font-size: 12px;
+      flex: 0 0 64px;
+      height: 64px;
+      font-size: clamp(13px, 1.05vw, 15px);
+      line-height: 1.4;
       color: #E2E8F0;
-      min-height: 14px;
-      max-height: 52px;
-      overflow-y: auto;
-      padding-right: 6px;
+      min-height: 18px;
+      max-height: 64px;
+      overflow-y: hidden;
+      padding-right: 86px; /* Update — keep text clear of the top-right HUD window controls */
       -webkit-app-region: no-drag;
     }
     #question-line::-webkit-scrollbar { width: 4px; }
@@ -125,90 +162,110 @@
 
     .answer-label {
       display: none;
+      /* Update — Floating Loader: the "⟳ preparing…" spinner is absolutely
+         positioned so it NEVER shifts the answer-box flex layout (top-right
+         of the card, above the UI, click-through safe). */
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 50;
       font-size: 10px;
       color: #64748B;
       margin-bottom: 4px;
+      pointer-events: none;
     }
 
     #answer-box {
       box-sizing: border-box;
       flex: 1 1 auto;
       min-height: 0;
-      /* Phase 9 + Update 1 — premium teleprompter styling: glassmorphism
-         deep-slate card that keeps the candidate's eyes on the answer. */
-      background: rgba(15, 23, 42, 0.85); /* Deep slate, glassmorphism */
-      color: #F8FAFC;
-      font-size: 18px;
-      line-height: 1.6;
-      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; /* clip the inner scroll area to the card's radius */
+      background: rgba(15, 23, 42, 0.85); /* Deep slate card */
       border-radius: 12px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      overflow-y: auto;
+    }
+
+    /* Update 4 — Action Pill Collision Protection: the scroll region carries
+       dynamic bottom padding so the floating action pill (bottom-right) never
+       hides the last lines of the answer. */
+    .answer-scroll-area {
+      box-sizing: border-box;
+      flex: 1 1 auto;
+      min-height: 120px;      /* Keeps a consistent box size even when empty/thinking */
+      max-height: 350px;      /* Massive reading area for the 520px expanded window */
+      overflow-y: auto;       /* Internal scrollbar handles overflow safely */
+      padding: 16px 18px;
+      padding-bottom: calc(60px + env(safe-area-inset-bottom));
       scroll-behavior: smooth;
       overflow-wrap: break-word;
       scrollbar-width: thin;
-    }
-    #answer-box::-webkit-scrollbar { width: 5px; }
-    #answer-box::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-
-    /* Update 2 — Classy Action Bar: layout-safe vertical button rail.
-       flex: 0 0 auto keeps it out of the answer's flex space, so it never
-       reflows the teleprompter text while the answer streams in. */
-    #action-bar {
-      flex: 0 0 auto;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 8px;
       -webkit-app-region: no-drag;
     }
+    .answer-scroll-area::-webkit-scrollbar { width: 5px; }
+    .answer-scroll-area::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
 
-    .action-btn {
-      background: rgba(15, 23, 42, 0.6);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      padding: 8px;
-      cursor: pointer;
+    /* Update 4 — Fluid Typography: no hardcoded px for the reading text; the
+       clamp base (16–20px) scales with viewport width and can be nudged with
+       the A− / A+ settings buttons via --font-scale.
+       Update — base size reduced by 2px (16 → 14px, cap 20 → 18px) so longer
+       answers fit comfortably in the taller window. */
+    .answer-content {
+      width: min(70ch, 100%);
+      margin-inline: auto;
+      font-size: clamp(calc(14px * var(--font-scale, 1)), calc(1.5vw * var(--font-scale, 1)), calc(18px * var(--font-scale, 1)));
+      line-height: 1.5;
+      opacity: 1;
+    }
+
+    /* Update 4 — Semantic Thought Blocks + Active Reading Highlight: each 1-2
+       sentence block renders as a <p>. The newest block is bright; every prior
+       block settles to a muted slate so the eye tracks the live line. */
+    .answer-content p {
+      margin: 0 0 0.55em 0;
       color: #94A3B8;
-      transition: all 0.1s;
-      font-size: 14px;
-      line-height: 1;
-      user-select: none;
+      opacity: 0.65;
+      transition: opacity 0.35s ease, color 0.35s ease;
     }
-    .action-btn:hover {
+    .answer-content p.current {
       color: #F8FAFC;
-      background: rgba(15, 23, 42, 0.85);
-    }
-    .action-btn:active {
-      transform: scale(0.90);
-      background: rgba(255, 255, 255, 0.2);
+      opacity: 1;
     }
 
     /* Update 2 — Seamless Transitions: fade an outgoing answer out instead of
-       hard-clearing it. Must win over the state-based dimming rules above. */
+       hard-clearing it. Must win over the block highlight rules above. */
     .dimmed {
       opacity: 0.35 !important;
       transition: opacity 0.3s ease-in-out;
     }
 
-    /* Dim an answer once it is no longer the current one */
-    .overlay-card[data-state="SPEECH_ACTIVE"] #answer-box,
-    .overlay-card[data-state="QUESTION_BUILDING"] #answer-box,
-    .overlay-card[data-state="PAUSE_DETECTED"] #answer-box,
-    .overlay-card[data-state="QUESTION_CANDIDATES_READY"] #answer-box,
-    .overlay-card[data-state="QUESTION_BOUNDARY_LIKELY"] #answer-box,
-    .overlay-card[data-state="ANSWER_PREPARING"] #answer-box,
-    .overlay-card[data-state="ANSWERING"] #answer-box,
-    .overlay-card[data-state="WAITING_FOR_MORE"] #answer-box,
-    .overlay-card[data-state="FOLLOW_UP"] #answer-box,
-    .overlay-card[data-state="LISTENING"] #answer-box,
-    .overlay-card[data-state="PAUSED"] #answer-box {
-      opacity: 0.55;
+    /* Update 5 — Additive "Folder" UI: each committed answer is appended as a
+       stacked card so a new answer never wipes the previous one; streaming
+       fills the newest card until the answer is committed. */
+    .answer-folder {
+      background: rgba(30, 41, 59, 0.85); /* Slate 800 with opacity */
+      border-left: 4px solid #38bdf8;     /* Blue accent — folder tab */
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      animation: slideIn 0.3s ease-out;
+    }
+    .folder-timestamp {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .answer-folder-body p { margin: 0 0 0.55em 0; }
+    .answer-folder-body p:last-child { margin-bottom: 0; }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     /* SECONDARY: hint */
@@ -232,9 +289,9 @@
       font-size: 11px;
       color: #94A3B8;
       line-height: 1.35;
-      padding-right: 6px;
-      mask-image: linear-gradient(to bottom, transparent, black 20%, black 100%);
-      -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 100%);
+      padding-right: 100px; /* keep the "Hearing:" line clear of the floating pill */
+      mask-image: linear-gradient(to top, transparent, black 20%, black 100%);
+      -webkit-mask-image: linear-gradient(to top, transparent, black 20%, black 100%);
       -webkit-app-region: no-drag;
     }
     #text-box::-webkit-scrollbar { width: 4px; }
@@ -270,7 +327,102 @@
     #score-accuracy { font-weight: 700; }
     #score-feedback { color: #CBD5E1; }
 
-    /* Update 1 — Slide-out drawers (hidden by default, translateX off-canvas) */
+    /* Update 4 — Floating Action Pill: bottom-right, anchored to the card, so
+       it NEVER reflows the teleprompter text. Clean Unicode icons only. */
+    .action-pill {
+      position: absolute;
+      right: 15px;
+      bottom: 15px;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      padding: 5px 8px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+      -webkit-app-region: no-drag;
+    }
+
+    .action-btn {
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 50%;
+      cursor: pointer;
+      color: #CBD5E1;
+      font-size: 15px;
+      line-height: 1;
+      transition: all 0.1s;
+      user-select: none;
+      -webkit-app-region: no-drag;
+    }
+    .action-btn:hover { color: #F8FAFC; background: rgba(255, 255, 255, 0.14); }
+    .action-btn:active { transform: scale(0.90); background: rgba(255, 255, 255, 0.22); }
+
+    /* Update 4 — Compact Liquid Layout: below 500×300 the pill keeps only
+       Pause + Mic so the primary controls stay reachable in small windows. */
+    [data-compact="true"] .action-pill .secondary-btn { display: none; }
+
+    /* Update 4 — Floating Follow Button: hidden by default, appears when the
+       candidate scrolls up (hysteresis scroll). Snaps back to the live line. */
+    .follow-btn {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 110;
+      display: none;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #F8FAFC;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+      padding: 5px 12px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+      -webkit-app-region: no-drag;
+    }
+    .follow-btn.show { display: inline-flex; }
+    .follow-btn:hover { background: rgba(30, 41, 59, 0.95); }
+
+    /* Update 4 — Focus Mode: header + action pill vanish for a distraction-free
+       teleprompter; a small Exit Focus chip stays reachable. */
+    .focus-exit {
+      display: none;
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 300;
+      font-size: 11px;
+      font-weight: 600;
+      color: #94A3B8;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      -webkit-app-region: no-drag;
+    }
+    .focus-exit:hover { color: #F8FAFC; background: rgba(30, 41, 59, 0.95); }
+
+    .overlay-card.focus-mode .status-bar,
+    .overlay-card.focus-mode .action-pill { display: none; }
+    .overlay-card.focus-mode .focus-exit { display: inline-flex; }
+
+    /* Update 1 — Slide-out drawer (hidden by default, translateX off-canvas) */
     .drawer {
       position: absolute;
       top: 40px;
@@ -300,26 +452,13 @@
       margin-bottom: 10px;
     }
 
-    #shortcuts-drawer .grid {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 5px 12px;
-      font-size: 12px;
-      align-items: center;
-    }
-    #shortcuts-drawer kbd {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 5px;
-      padding: 1px 6px;
-      font-family: inherit;
-      font-size: 11px;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-    #shortcuts-drawer span { color: #E2E8F0; }
-
     #settings-drawer .setting-row { margin-bottom: 12px; }
+    #settings-drawer .setting-label {
+      display: block;
+      font-size: 12px;
+      color: #CBD5E1;
+      margin-bottom: 4px;
+    }
     #settings-drawer label {
       display: flex;
       justify-content: space-between;
@@ -337,11 +476,155 @@
       color: #F8FAFC;
     }
 
+    .font-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .font-btn {
+      width: 36px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      cursor: pointer;
+      color: #E2E8F0;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1;
+      -webkit-app-region: no-drag;
+    }
+    .font-btn:hover { background: rgba(255, 255, 255, 0.16); color: #F8FAFC; }
+
+    .drawer-link {
+      cursor: pointer;
+      color: #38BDF8;
+      font-size: 12px;
+      font-weight: 600;
+      -webkit-app-region: no-drag;
+    }
+    .drawer-link:hover { color: #7DD3FC; }
+
+    #shortcuts-panel .grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 5px 12px;
+      font-size: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    #shortcuts-panel kbd {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    #shortcuts-panel span { color: #E2E8F0; }
+
     /* Update 1 — Freeform resize handles (invisible drag zones) */
     .resize-handle { position: absolute; z-index: 900; -webkit-app-region: no-drag; }
     #resize-se { right: 0; bottom: 0; width: 18px; height: 18px; cursor: se-resize; }
     #resize-s  { left: 10px; right: 10px; bottom: 0; height: 6px; cursor: s-resize; }
     #resize-e  { top: 10px; bottom: 10px; right: 0; width: 6px; cursor: e-resize; }
+
+    /* Update — HUD Window Controls: tiny, unobtrusive emoji-style layout
+       buttons, absolutely positioned at the top-right just below the status
+       bar. Never part of the drag region; never affects the flex layout. */
+    .window-controls {
+      position: absolute;
+      top: 34px;
+      right: 12px;
+      z-index: 400;
+      display: flex;
+      align-items: center;
+      gap: 1px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 7px;
+      padding: 2px 3px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      -webkit-app-region: no-drag;
+    }
+    .window-controls button {
+      width: 22px;
+      height: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      line-height: 1;
+      color: #94A3B8;
+      padding: 0;
+      -webkit-app-region: no-drag;
+    }
+    .window-controls button:hover { color: #F8FAFC; background: rgba(255, 255, 255, 0.12); }
+    .window-controls button:active { background: rgba(255, 255, 255, 0.22); }
+
+    /* Update — Slide-out Q&A History Panel: hidden off-canvas and revealed via
+       transform: translateX(), so it never affects the card's flex/grid layout. */
+    #history-panel {
+      position: absolute;
+      top: 40px;
+      right: 14px;
+      z-index: 460;
+      width: 280px;
+      max-height: calc(100% - 60px);
+      box-sizing: border-box;
+      overflow-y: auto;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 12px;
+      color: #F8FAFC;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transform: translateX(120%);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      -webkit-app-region: no-drag;
+    }
+    #history-panel.open { transform: translateX(0); opacity: 1; pointer-events: auto; }
+    .history-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #94A3B8;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .history-item {
+      border-left: 3px solid #38BDF8;
+      background: rgba(30, 41, 59, 0.6);
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+    }
+    .history-q {
+      font-size: 11px;
+      font-weight: 600;
+      color: #E2E8F0;
+      margin-bottom: 4px;
+      overflow-wrap: break-word;
+    }
+    .history-a {
+      font-size: 12px;
+      color: #CBD5E1;
+      line-height: 1.45;
+      overflow-wrap: break-word;
+    }
+    .history-empty { font-size: 12px; color: #64748B; }
   </style>
 </head>
 <body>
@@ -353,21 +636,28 @@
         <span id="status-text">BOOMI COMPANION • LISTENING</span>
         <span class="diag-badge on" id="mode-badge" style="background: #3B82F6; margin-right: 8px;">SPEAK</span>
         <span class="diag-badge on" id="mic-badge" style="background: #EF4444; margin-right: 8px;">MIC: OFF</span>
+        <span class="click-badge" id="click-badge">CLICK</span>
+        <span class="diag-badge" id="diag-badge">DIAG</span>
       </div>
-      <div style="display:flex;align-items:center;">
+      <div class="status-actions">
+        <button class="header-btn" id="btn-focus" title="Hide UI for distraction-free reading" onclick="toggleFocus()">Focus</button>
+        <button class="header-btn" id="btn-settings" title="Settings" onclick="runAction('toggle-settings')">⚙</button>
+        <button class="header-btn" id="btn-history" title="Q&A History" onclick="toggleHistoryPanel()">📜</button>
         <span class="close-btn" onclick="closeApp()">✕</span>
       </div>
+    </div>
+    <div class="window-controls" id="window-controls">
+      <button id="btn-win-min" title="Minimize to mini-overlay" onclick="ipcRenderer.send('window-minimize')">➖</button>
+      <button id="btn-win-split" title="Split-Screen beside Teams/Zoom (50%)" onclick="ipcRenderer.send('window-split')">🗖</button>
+      <button id="btn-win-max" title="Maximize" onclick="ipcRenderer.send('window-maximize')">🗗</button>
     </div>
     <div id="question-line"><span style="color:#64748B;">Listening for the question…</span></div>
     <div class="answer-wrap">
       <div class="answer-label" id="answer-label">⟳ preparing…</div>
-      <div id="answer-box"><span style="color:#64748B;">Listening for the question…</span></div>
-      <div id="action-bar">
-        <button class="action-btn" id="btn-pause" title="Pause / Resume (Alt+S)" onclick="runAction('toggle-listen')">⏸️</button>
-        <button class="action-btn" id="btn-clear" title="Clear (Alt+C)" onclick="runAction('clear-text')">🧹</button>
-        <button class="action-btn" id="btn-regen" title="Regenerate (Alt+R)" onclick="runAction('regenerate')">🔄</button>
-        <button class="action-btn" id="btn-mic" title="Candidate Mic (Alt+V)" onclick="runAction('toggle-mic', !candidateMicRunning)">🎤</button>
-        <button class="action-btn" id="btn-panic" title="Click to hide. Press Alt+P to unhide." onclick="ipcRenderer.send('toggle-panic')">👻</button>
+      <div id="answer-box">
+        <div class="answer-scroll-area" id="answer-scroll-area">
+          <div class="answer-content" id="answer-content"><span class="answer-placeholder" style="color:#64748B;">Listening for the question…</span></div>
+        </div>
       </div>
     </div>
     <div id="hint"></div>
@@ -377,35 +667,58 @@
       <strong id="score-accuracy"></strong> <span id="score-feedback"></span>
     </div>
 
-    <div id="shortcuts-drawer" class="drawer">
-      <div class="drawer-title">Shortcuts</div>
-      <div class="grid">
-        <kbd>Alt+S</kbd><span>Pause / Resume</span>
-        <kbd>Alt+C</kbd><span>Clear</span>
-        <kbd>Alt+M</kbd><span>Mode (SPEAK / THINK)</span>
-        <kbd>Alt+V</kbd><span>Candidate Mic</span>
-        <kbd>Alt+A</kbd><span>Analyze Answer</span>
-        <kbd>Alt+P</kbd><span>Panic Hide</span>
-        <kbd>Alt+Z</kbd><span>Click-Through</span>
-        <kbd>Alt+X</kbd><span>Window Size</span>
+    <div class="action-pill" id="action-pill">
+      <button class="action-btn secondary-btn" id="btn-clear" title="Clear (Alt+C)" onclick="runAction('clear-text')">✦</button>
+      <button class="action-btn secondary-btn" id="btn-regen" title="Regenerate (Alt+R)" onclick="runAction('regenerate')">↻</button>
+      <button class="action-btn" id="btn-pause" title="Pause / Resume (Alt+S)" onclick="runAction('toggle-listen')">Ⅱ</button>
+      <button class="action-btn" id="btn-mic" title="Candidate Mic (Alt+V)" onclick="runAction('toggle-mic', !candidateMicRunning)">🎤</button>
+    </div>
+
+    <button class="follow-btn" id="follow-btn" onclick="followToBottom()"><span>↓</span> Follow</button>
+
+    <div id="settings-drawer" class="drawer">
+      <div id="settings-panel">
+        <div class="drawer-title">Settings</div>
+        <div class="setting-row">
+          <label for="opacity-slider">Glass Opacity <span class="setting-value" id="opacity-value">70%</span></label>
+          <input type="range" id="opacity-slider" min="30" max="100" value="70">
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Font Size</span>
+          <div class="font-controls">
+            <button class="font-btn" id="font-minus" title="Smaller text" onclick="adjustFontScale(-1)">A−</button>
+            <button class="font-btn" id="font-plus" title="Larger text" onclick="adjustFontScale(1)">A+</button>
+            <span class="setting-value" id="font-value">100%</span>
+          </div>
+        </div>
+        <div class="setting-row">
+          <span class="drawer-link" onclick="flipSettingsPanel()">View Keyboard Shortcuts →</span>
+        </div>
+      </div>
+      <div id="shortcuts-panel" style="display:none;">
+        <div class="drawer-title">Keyboard Shortcuts</div>
+        <div class="grid">
+          <kbd>Alt+S</kbd><span>Pause / Resume</span>
+          <kbd>Alt+C</kbd><span>Clear</span>
+          <kbd>Alt+V</kbd><span>Candidate Mic</span>
+          <kbd>Alt+P</kbd><span>Panic Hide</span>
+        </div>
+        <div class="setting-row">
+          <span class="drawer-link" onclick="flipSettingsPanel()">← Back to Settings</span>
+        </div>
       </div>
     </div>
 
-    <div id="settings-drawer" class="drawer">
-      <div class="drawer-title">Settings</div>
-      <div class="setting-row">
-        <label for="opacity-slider">Window Opacity <span class="setting-value" id="opacity-value">100%</span></label>
-        <input type="range" id="opacity-slider" min="30" max="100" value="100">
-      </div>
-      <div class="setting-row">
-        <label for="font-size-slider">Font Size <span class="setting-value" id="font-size-value">18px</span></label>
-        <input type="range" id="font-size-slider" min="14" max="28" value="18">
-      </div>
+    <div id="history-panel">
+      <div class="history-title">📜 Previous Q&A</div>
+      <div id="history-list"><div class="history-empty">No previous Q&A yet.</div></div>
     </div>
 
     <div id="resize-se" class="resize-handle"></div>
     <div id="resize-s" class="resize-handle"></div>
     <div id="resize-e" class="resize-handle"></div>
+
+    <button class="focus-exit" id="btn-focus-exit" onclick="toggleFocus()">Exit Focus</button>
   </div>
 
   <script>
@@ -413,22 +726,27 @@
     const { InterviewEngine, STATES } = require('./engine.js');
     const { DiagnosticLogger } = require('./diagnostics.js');
     const { pickSupportedAudioMimeType, buildDeepgramStreamUrl, startCandidateAudio } = require('./audio-pipeline.js');
+    const { ProviderRouter } = require('./provider-router.js');
 
     const card = document.querySelector('.overlay-card');
     const statusBar = document.querySelector('.status-bar');
     const statusText = document.getElementById('status-text');
     const dot = document.getElementById('dot');
     const answerBox = document.getElementById('answer-box');
+    const scrollArea = document.getElementById('answer-scroll-area');
+    const answerContent = document.getElementById('answer-content');
     const answerLabel = document.getElementById('answer-label');
     const questionLine = document.getElementById('question-line');
     const hintEl = document.getElementById('hint');
     const textBox = document.getElementById('text-box');
     const clickBadge = document.getElementById('click-badge');
+    const followBtn = document.getElementById('follow-btn');
 
     let isListening = true;
     let isExpanded = false;
     let mediaRecorder;
     let deepgramConnection = null;
+    let keepAliveTimer = null; // Deepgram KeepAlive heartbeat (cleared on close)
     let groqKey = ''; // Uses your Groq environment key
     let geminiKey = ''; // Phase 12 — Gemini failover key (optional)
     let deepgramKey = ''; // Deepgram key cached for the candidate-mic socket
@@ -468,6 +786,10 @@
     // audio/Deepgram/engine pipeline (buffered async writes).
     // ------------------------------------------------------------
     const diagState = { enabled: typeof process !== 'undefined' && process.env && process.env.DEBUG_DIAGNOSTICS === 'true' };
+    // STEP 9 — Pilot privacy: DIAGNOSTICS_PRIVACY=debug (default; logs full
+    // transcript content for developer analysis) or pilot (strips candidate
+    // transcript/content, keeps timing/state/provider/latency/fallback metrics).
+    const diagPrivacy = (typeof process !== 'undefined' && process.env && process.env.DIAGNOSTICS_PRIVACY) || 'debug';
     const diagBadge = document.getElementById('diag-badge');
 
     function createDiagnosticLogger() {
@@ -479,7 +801,8 @@
           try { return require('path').join(__dirname, 'logs'); } catch (_) { return 'logs'; }
         })(),
         domain: currentDomain,
-        mode: 'diagnostic'
+        mode: 'diagnostic',
+        privacy: diagPrivacy === 'pilot' ? 'pilot' : 'debug'
       });
     }
 
@@ -502,6 +825,26 @@
         if (l) l.emit(eventType, data);
       } catch (_) { /* diagnostics must never interfere with transcript handling */ }
     }
+
+    // ------------------------------------------------------------
+    // Provider Router (STEP 4-6) — hardened multi-provider LLM routing:
+    // Groq first, Gemini failover on transient failures, per-provider circuit
+    // breaker with probe-based recovery, TTFT + total-request timeouts on every
+    // call. API keys are read lazily (loaded by connectDeepgram) so the router
+    // can be constructed up-front.
+    // ------------------------------------------------------------
+    const providerRouter = new ProviderRouter({
+      fetch,
+      providers: {
+        groq: { apiKey: () => groqKey },
+        gemini: { apiKey: () => geminiKey }
+      },
+      order: ['groq', 'gemini'],
+      now: Date.now,
+      setTimeout: (fn, ms) => window.setTimeout(fn, ms),
+      clearTimeout: (id) => window.clearTimeout(id),
+      onEvent: (type, data) => diagTrace(type, data)
+    });
 
     // ------------------------------------------------------------
     // UI state presentation + render helpers (defined before engine
@@ -547,18 +890,24 @@
       if (preparing) answerLabel.innerText = '⟳ preparing…';
       // Update 2 — seamless transitions: a new question dims the old answer
       // out instead of hard-clearing it. The first streamed chunk removes the
-      // .dimmed class in renderAnswer().
+      // .dimmed class in paintAnswer().
       if (state === STATES.QUESTION_BUILDING) {
         answerBox.classList.add('dimmed');
       }
       // Update 2 — silent error masking: on engine failure, gracefully keep
       // the teleprompter alive with a helpful integration-side fallback line.
+      // The status stays "◉ Listening" (no red badge) per Update 4.
       if (state === STATES.ERROR) {
         answerBox.classList.remove('dimmed');
-        answerBox.innerHTML = "Let me break that down from the integration side...";
+        answerContent.innerHTML = '<p class="current">Let me break that down from the integration side...</p>';
         answerBox.style.borderLeft = '';
       }
       renderQuestionLine();
+      // Update — History Panel: a NEW question boundary archives the previous
+      // Q+A into the slide-out drawer and clears the main answer area so the
+      // new question starts with a clean canvas (reuses the engine's existing
+      // turn detection — no second question detector).
+      archiveOnNewTurn(state);
     }
 
     // MIDDLE: current likely question / ranked interpretations (sections 20-22)
@@ -573,11 +922,8 @@
           : '';
       } else if (s === STATES.WAITING_FOR_MORE) {
         html = '<span style="color:#F59E0B;">Waiting for more context…</span>';
-      } else if (engine.candidates && engine.candidates.length) {
-        html = engine.candidates.map(c =>
-          '<span style="color:' + (c.priority === 1 ? '#F8FAFC' : '#94A3B8') + ';">P' + c.priority + ': ' +
-          c.confidence + ' — ' + escapeHtml(c.text) + '</span>'
-        ).join('<br>');
+      } else if (engine.primary && engine.primary.text) {
+        html = '<span style="color:#F8FAFC; font-weight:600;">' + escapeHtml(engine.primary.text) + '</span>';
       } else if (engine.topic) {
         html = '<span style="color:#94A3B8;">Likely area: ' + escapeHtml(engine.topic) + '</span>';
       } else {
@@ -590,42 +936,197 @@
       hintEl.innerText = hint ? `💡 ${hint}` : '';
     }
 
+    // ------------------------------------------------------------
+    // Update — Slide-out Q&A History Panel. Reuses the engine's existing
+    // question-boundary/turn detection (contextHistory + turnId) — no second
+    // independent detector. When a NEW question starts, the previous completed
+    // Q+A is archived into the drawer and the main answer area is cleared so
+    // the new question begins clean.
+    // ------------------------------------------------------------
+    const historyEntries = [];
+    let lastArchivedTurnId = null;
+
+    function archiveOnNewTurn(state) {
+      if (state !== STATES.QUESTION_BUILDING && state !== STATES.FOLLOW_UP) return;
+      if (!engine.turnId || engine.turnId === lastArchivedTurnId) return;
+      const last = engine.contextHistory[engine.contextHistory.length - 1];
+      if (!last || !last.turnId || !(last.a || '').trim()) return;
+      historyEntries.push({ q: last.q || '', a: last.a, turnId: last.turnId, at: Date.now() });
+      lastArchivedTurnId = engine.turnId;
+      renderHistory();
+      clearMainAnswer();
+    }
+
+    function clearMainAnswer() {
+      answerContent.innerHTML = '<span class="answer-placeholder" style="color:#64748B;">Listening for the question…</span>';
+      answerBox.style.borderLeft = '';
+      answerBox.classList.remove('dimmed');
+      midStream = false;
+    }
+
+    function renderHistory() {
+      const panel = document.getElementById('history-panel');
+      const list = document.getElementById('history-list');
+      if (!panel || !list) return;
+      list.innerHTML = historyEntries.length
+        ? historyEntries.slice().reverse().map(h =>
+            '<div class="history-item">' +
+            '<div class="history-q">Q: ' + escapeHtml(h.q) + '</div>' +
+            '<div class="history-a">A: ' + escapeHtml(h.a) + '</div>' +
+            '</div>'
+          ).join('')
+        : '<div class="history-empty">No previous Q&A yet.</div>';
+    }
+
+    function toggleHistoryPanel() {
+      const panel = document.getElementById('history-panel');
+      if (!panel) return;
+      panel.classList.toggle('open');
+    }
+
+    // ------------------------------------------------------------
+    // Update 4 — Smart Teleprompter Engine
+    // ------------------------------------------------------------
+    // Semantic Thought Blocks: split a wall of text at sentence boundaries and
+    // group into 1-2 sentence <p> blocks (Active Reading Highlight paints the
+    // newest block bright and settles the rest to muted slate).
+    const SENTENCE_SPLIT_RE = /(?<=[.?!])\s+(?=[A-Z])/;
+
+    function splitSentences(text) {
+      return String(text || '').split(SENTENCE_SPLIT_RE).map(s => s.trim()).filter(Boolean);
+    }
+
+    function buildThoughtBlocks(text) {
+      const sentences = splitSentences(text);
+      const blocks = [];
+      for (let i = 0; i < sentences.length; i += 2) {
+        blocks.push(sentences.slice(i, i + 2).join(' '));
+      }
+      return blocks;
+    }
+
+    function paintAnswer(text, forceTop = false, isNewCommit = true) {
+      answerBox.classList.remove('dimmed');
+      let folder;
+      if (isNewCommit) {
+        // Update 5 — additive "folder" UI: a newly committed answer gets its
+        // own stacked card below any earlier answers instead of wiping them.
+        const placeholder = answerContent.querySelector('.answer-placeholder');
+        if (placeholder) placeholder.remove();
+        folder = document.createElement('div');
+        folder.className = 'answer-folder';
+
+        const header = document.createElement('div');
+        header.className = 'folder-timestamp';
+        const d = new Date();
+        header.innerText = 'Update • ' + d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+        folder.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'answer-folder-body';
+        folder.appendChild(body);
+        answerContent.appendChild(folder);
+      } else {
+        // Streaming update — repaint the most recent folder in place.
+        folder = answerContent.querySelector('.answer-folder:last-of-type');
+        if (!folder) {
+          // No card yet (e.g. first chunk raced ahead of the commit flag).
+          return paintAnswer(text, forceTop, true);
+        }
+      }
+      const blocks = buildThoughtBlocks(text);
+      const body = folder.querySelector('.answer-folder-body') || folder;
+      body.innerHTML = blocks.map((b, i) => {
+        const current = i === blocks.length - 1 ? ' current' : '';
+        return '<p class="teleprompter-block' + current + '">' + escapeHtml(b) + '</p>';
+      }).join('');
+      if (forceTop) {
+        if (typeof scrollArea.scrollTo === 'function') scrollArea.scrollTo({ top: 0, behavior: 'auto' });
+        else scrollArea.scrollTop = 0;
+      } else if (autoFollow) {
+        if (typeof scrollArea.scrollTo === 'function') scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: 'smooth' });
+        else scrollArea.scrollTop = scrollArea.scrollHeight;
+      }
+    }
+
     function renderAnswer(answer, provisional) {
       if (!answer) {
         // Update 2 — seamless transitions: a clear() only dims the outgoing
         // answer (via .dimmed in runAction) — never hard-empty it here.
         if (answerBox.classList.contains('dimmed')) return;
-        answerBox.innerHTML = '<span style="color:#64748B;">Listening for the question…</span>';
+        answerContent.innerHTML = '<span class="answer-placeholder" style="color:#64748B;">Listening for the question…</span>';
         answerBox.style.borderLeft = ''; // Phase 6 — clear confidence indicator on reset
         return;
       }
-      // First chunk of a new answer: un-dim the box so the fresh stream is
-      // fully readable as it fills the teleprompter.
-      answerBox.classList.remove('dimmed');
-      answerBox.innerHTML = escapeHtml(answer);
-      // Phase 9 — teleprompter pinning: smoothly scroll the newest answer into
-      // the bottom viewable band so the candidate never has to touch the mouse
-      // while reading aloud.
-      // Update 2 — smart scrolling: honor manual reads — if the candidate has
-      // scrolled up to re-read a section, stop auto-pinning until they return
-      // to the bottom.
-      if (isAutoScroll) {
-        if (typeof answerBox.scrollTo === 'function') {
-          answerBox.scrollTo({ top: answerBox.scrollHeight, behavior: 'smooth' });
-        } else {
-          answerBox.scrollTop = answerBox.scrollHeight;
+      // Update 5 — additive folder boundary: the first provisional chunk of a
+      // new answer turn commits a fresh folder; every later chunk (and the
+      // final render) updates that same folder in place.
+      const isNewCommit = !midStream;
+      if (provisional) midStream = true;
+      else midStream = false;
+      // STEP 10 — render-only clause throttling: provisional streaming chunks
+      // repaint at most every STREAM_RENDER_MS; a trailing timer always paints
+      // the newest text, and the final (non-provisional) render is immediate.
+      if (provisional) {
+        const now = Date.now();
+        if (now - lastStreamRenderAt < STREAM_RENDER_MS) {
+          if (!streamRenderPending) {
+            streamRenderPending = setTimeout(() => {
+              streamRenderPending = null;
+              lastStreamRenderAt = Date.now();
+              paintAnswer(answer, false, isNewCommit);
+            }, STREAM_RENDER_MS);
+          }
+          return;
         }
+        lastStreamRenderAt = now;
+        paintAnswer(answer, false, isNewCommit);
+        return;
+      }
+      if (streamRenderPending) { clearTimeout(streamRenderPending); streamRenderPending = null; }
+      lastStreamRenderAt = 0;
+      // STEP 10 — auto-scroll reset: a brand-new final answer re-engages
+      // bottom-pinning even if the candidate had scrolled up to re-read.
+      // Update 4 — hysteresis: also drop the Follow affordance.
+      // Finalize — snap to the top on a final answer instead of dragging the
+      // reader to the bottom; the streaming interim paints still follow.
+      autoFollow = false;
+      followBtn.classList.remove('show');
+      paintAnswer(answer, true, isNewCommit);
+    }
+
+    // Update 4 — Hysteresis Scroll: a manual scroll up of >48px pauses
+    // auto-follow and shows the floating [ ↓ Follow ] button; clicking it
+    // snaps to the live line and re-engages follow.
+    let autoFollow = true;
+
+    function updateFollowState() {
+      const gap = scrollArea.scrollHeight - scrollArea.scrollTop - scrollArea.clientHeight;
+      if (gap > 48) {
+        autoFollow = false;
+        followBtn.classList.add('show');
+      } else {
+        autoFollow = true;
+        followBtn.classList.remove('show');
       }
     }
 
-    // Update 2 — smart scrolling: track whether the candidate is pinned to the
-    // bottom of the answer. Scrolling up pauses auto-scroll; returning to the
-    // bottom re-engages it.
-    let isAutoScroll = true;
-    answerBox.addEventListener('scroll', () => {
-      const atBottom = answerBox.scrollTop + answerBox.clientHeight >= answerBox.scrollHeight - 20;
-      isAutoScroll = atBottom;
-    });
+    scrollArea.addEventListener('scroll', updateFollowState);
+
+    function followToBottom() {
+      autoFollow = true;
+      followBtn.classList.remove('show');
+      scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: 'smooth' });
+    }
+
+    // STEP 10 — render-only streaming throttle (paint cadence in ms).
+    const STREAM_RENDER_MS = 60;
+    let lastStreamRenderAt = 0;
+    let streamRenderPending = null;
+    // Update 5 — additive folder UI: true while a live answer is being
+    // streamed into its folder, so the next chunk keeps painting that folder
+    // instead of committing a new card.
+    let midStream = false;
 
     function escapeHtml(s) {
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -675,9 +1176,11 @@
         }
         // Phase 6 — Confidence Scoring: color the answer-box left border with the
         // turn's Green/Yellow/Red boundary confidence indicator.
+        // STEP 10 — confidence red is painted NEUTRAL (muted slate) instead of
+        // alarming red so a low-confidence question never stresses the candidate.
         if (res.confidence === 'green') answerBox.style.borderLeft = '4px solid #10B981';
         else if (res.confidence === 'yellow') answerBox.style.borderLeft = '4px solid #F59E0B';
-        else if (res.confidence === 'red') answerBox.style.borderLeft = '4px solid #EF4444';
+        else if (res.confidence === 'red') answerBox.style.borderLeft = '4px solid #94A3B8';
         renderAnswer(res.text, res.provisional);
       },
       fastPathCall: (messages) => callWithFallback(messages, true),
@@ -723,6 +1226,29 @@
         deepgramConnection.onopen = () => {
           console.log("[AUDIO_CONNECTED]", "Deepgram WebSocket Live Connection Opened");
           getLogger().emit('DEEPGRAM_CONNECTED', { model: 'nova-3' });
+
+          // KeepAlive heartbeat — prevents idle/silence timeouts on the live socket.
+          if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = null; }
+          keepAliveTimer = setInterval(() => {
+            if (deepgramConnection && deepgramConnection.readyState === WebSocket.OPEN) {
+              deepgramConnection.send(JSON.stringify({ type: 'KeepAlive' }));
+            }
+          }, 8000);
+
+          // Fresh WebM headers for the (possibly reconnected) socket: a MediaRecorder
+          // only writes its init segment on start(). If a reconnect happened, the old
+          // recorder would otherwise stream headerless continuation chunks that
+          // Deepgram rejects, instantly closing the new socket (reconnect loop).
+          if (mediaRecorder) {
+            if (mediaRecorder.state === 'recording') {
+              mediaRecorder.stop();
+              setTimeout(() => {
+                if (mediaRecorder && mediaRecorder.state === 'inactive') mediaRecorder.start(250);
+              }, 100);
+            } else if (mediaRecorder.state === 'inactive') {
+              mediaRecorder.start(250);
+            }
+          }
         };
 
         deepgramConnection.onmessage = (event) => {
@@ -801,6 +1327,10 @@
 
         deepgramConnection.onclose = () => {
           console.log('Deepgram connection closed. Reconnecting in 2s...');
+          // Stop feeding the recorder while disconnected: the onopen of the next
+          // socket restarts it to generate fresh WebM headers.
+          if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+          if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = null; }
           getLogger().emit('DEEPGRAM_DISCONNECTED', { reconnectDelayMs: 2000 });
           getLogger().emit('DEEPGRAM_RECONNECTING', { delayMs: 2000 });
           setTimeout(connectDeepgram, 2000);
@@ -934,169 +1464,21 @@
     // Phase 12 — Multi-Tier Model Split: the fast tier (mode === true) uses the
     // lightweight `llama-3.1-8b-instant` for cheap, low-latency classification;
     // the answer tier (mode !== true) uses the full `llama-3.3-70b-versatile`.
-    async function callGroq(messages, mode, onChunk, signal) {
-      const isFast = mode === true;
-      const body = {
-        model: isFast ? 'llama-3.1-8b-instant' : 'llama-3.3-70b-versatile',
-        messages,
-        temperature: 0.35,
-        ...(isFast ? { response_format: { type: 'json_object' } } : {})
-      };
-      // Buffered streaming (section 29): stream answer tokens but the engine
-      // only renders coherent clause-level chunks, never half words.
-      if (!isFast && typeof onChunk === 'function') body.stream = true;
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
-        body: JSON.stringify(body),
-        signal
-      });
-      if (!res.ok) throw new Error(`Groq API ${res.status} ${res.statusText}`);
-      if (!isFast && typeof onChunk === 'function') return await readStream(res, onChunk);
-      const data = await res.json();
-      return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-    }
-
-    // Update 3 — Provider Circuit Breaker: when Groq trips a rate-limit (429)
-    // we open the breaker for 60s and route every request straight to Gemini,
-    // so the pipeline never hammers a hot API while it cools down.
-    let groqCooldownUntil = 0;
-
-    // Phase 12 — Gemini Failover Router: every LLM path (fast, answer, grader)
-    // goes through here. Groq is attempted first with a 500ms time-to-first-token
-    // timeout; on a 429 rate-limit or the timeout abort, the request automatically
-    // fails over to Google Gemini 2.5 Flash (requires GEMINI_API_KEY).
+    // STEP 4-6 — Every LLM path (fast JSON, streaming answer, candidate grader)
+    // goes through the ProviderRouter: Groq -> Gemini failover, TTFT + total
+    // timeouts, per-provider circuit breaker with probe recovery. The router
+    // owns model selection, error classification, and breaker state — this
+    // wrapper just adapts the engine's call signatures to the router and
+    // surfaces fallback events to diagnostics.
     async function callWithFallback(messages, mode, onChunk) {
-      // Update 3 — provider health state checked FIRST: while the Groq breaker
-      // is open, skip the probe entirely and go straight to Gemini.
-      if (Date.now() < groqCooldownUntil) {
-        console.warn('[Router] Groq is in COOLDOWN. Instantly routing to Gemini.');
-        return await callGemini(messages, mode, onChunk);
-      }
-      const controller = new AbortController();
-      let ttftTimer = setTimeout(() => controller.abort(), 500);
-      // For the streaming answer tier the timer is cleared on the FIRST chunk —
-      // the 500ms budget only covers time-to-first-token, not the whole stream.
-      const wrappedChunk = typeof onChunk === 'function' ? (chunk) => {
-        if (ttftTimer) { clearTimeout(ttftTimer); ttftTimer = null; }
-        onChunk(chunk);
-      } : undefined;
-      try {
-        try {
-          const result = await callGroq(messages, mode, wrappedChunk, controller.signal);
-          if (ttftTimer) { clearTimeout(ttftTimer); ttftTimer = null; }
-          return result;
-        } catch (err) {
-          if (ttftTimer) { clearTimeout(ttftTimer); ttftTimer = null; }
-          const is429 = String(err && err.message || err).indexOf('429') !== -1;
-          const isAbort = controller.signal.aborted;
-          if (!is429 && !isAbort) throw err; // only fail over on rate-limit or timeout
-          // Update 3 — trip the breaker on a 429 BEFORE failing over, so the
-          // next 60s of requests skip Groq entirely (no repeated hammering).
-          if (is429) {
-            groqCooldownUntil = Date.now() + 60000; // 60 seconds cooldown
-            console.warn('[Router] Groq 429 rate-limited → circuit breaker OPEN for 60s');
-          }
-          if (!geminiKey) {
-            console.warn('[Router] Groq ' + (isAbort ? 'TTFT timeout' : '429') + ' but GEMINI_API_KEY is not set — no failover');
-            throw err;
-          }
-          console.warn('[Router] Groq ' + (isAbort ? 'TTFT timeout' : '429 rate-limited') + ' → failing over to Gemini 2.5 Flash');
-          return await callGemini(messages, mode, onChunk);
-        }
-      } finally {
-        if (ttftTimer) { clearTimeout(ttftTimer); ttftTimer = null; }
-      }
-    }
-
-    // Phase 12 — Google Gemini 2.5 Flash. Mirrors Groq's streaming contract:
-    // returns the full text (calling onChunk for the answer tier), or the plain
-    // content string for the JSON fast tier.
-    async function callGemini(messages, mode, onChunk) {
-      const isFast = mode === true;
-      const systemText = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
-      const contents = messages.filter(m => m.role !== 'system').map(m => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }]
-      }));
-      const body = {
-        contents,
-        ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
-        generationConfig: {
-          temperature: 0.35,
-          ...(isFast ? { responseMimeType: 'application/json' } : {})
-        }
-      };
-      const key = geminiKey;
-      const endpoint = isFast
-        ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`
-        : `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+      const result = await providerRouter.request(messages, {
+        mode: mode === true,
+        onChunk: typeof onChunk === 'function' ? onChunk : undefined
       });
-      if (!res.ok) throw new Error(`Gemini API ${res.status} ${res.statusText}`);
-      if (isFast) {
-        const data = await res.json();
-        return (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts || [])
-          .map(p => p.text || '').join('');
+      if (result && result.fallback) {
+        diagTrace('PROVIDER_FALLBACK', { from: 'groq', to: result.provider, latencyMs: result.latencyMs, ttftMs: result.ttftMs });
       }
-      return await readGeminiStream(res, onChunk);
-    }
-
-    async function readGeminiStream(res, onChunk) {
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let full = '';
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop();
-        for (const line of lines) {
-          const t = line.trim();
-          if (!t.startsWith('data:')) continue;
-          const payload = t.slice(5).trim();
-          if (!payload || payload === '[DONE]') continue;
-          try {
-            const json = JSON.parse(payload);
-            const text = (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts || [])
-              .map(p => p.text || '').join('');
-            if (text) { full += text; if (onChunk) onChunk(full); }
-          } catch (_) { /* ignore malformed chunk */ }
-        }
-      }
-      return full;
-    }
-
-    async function readStream(res, onChunk) {
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let full = '';
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop();
-        for (const line of lines) {
-          const t = line.trim();
-          if (!t.startsWith('data:')) continue;
-          const payload = t.slice(5).trim();
-          if (payload === '[DONE]') continue;
-          try {
-            const json = JSON.parse(payload);
-            const delta = json.choices && json.choices[0] && json.choices[0].delta;
-            const piece = (delta && (delta.content || '')) || '';
-            if (piece) { full += piece; onChunk(full); }
-          } catch (_) { /* ignore malformed chunk */ }
-        }
-      }
-      return full;
+      return result ? result.text : '';
     }
 
     // ------------------------------------------------------------
@@ -1139,20 +1521,17 @@
     ipcRenderer.on('session-end', endDiagnosticSession);
 
     // ------------------------------------------------------------
-    // Update 1 — Stealth Pro HUD: slide-out drawers, settings sliders,
-    // floating toast scorecard, and freeform resize handles.
+    // Update 1 + Update 4 — Settings drawer (glass opacity, font scale,
+    // shortcuts flip), floating pill, focus mode, liquid compact layout.
     // ------------------------------------------------------------
-    const shortcutsDrawer = document.getElementById('shortcuts-drawer');
     const settingsDrawer = document.getElementById('settings-drawer');
     const opacitySlider = document.getElementById('opacity-slider');
     const opacityValue = document.getElementById('opacity-value');
-    const fontSizeSlider = document.getElementById('font-size-slider');
-    const fontSizeValue = document.getElementById('font-size-value');
+    const fontValue = document.getElementById('font-value');
 
     let drawerTimer = null;
 
     function closeDrawers() {
-      shortcutsDrawer.classList.remove('open');
       settingsDrawer.classList.remove('open');
       if (drawerTimer) { clearTimeout(drawerTimer); drawerTimer = null; }
     }
@@ -1164,29 +1543,61 @@
       closeDrawers();
       if (!isOpen) drawer.classList.add('open');
       if (drawerTimer) clearTimeout(drawerTimer);
-      // Auto-close the drawers after 8 seconds of mouse inactivity.
+      // Auto-close the drawer after 8 seconds of mouse inactivity.
       drawerTimer = setTimeout(closeDrawers, 8000);
     }
 
     document.addEventListener('mousemove', () => {
-      const anyOpen = shortcutsDrawer.classList.contains('open') || settingsDrawer.classList.contains('open');
+      const anyOpen = settingsDrawer.classList.contains('open');
       if (!anyOpen) return;
       if (drawerTimer) clearTimeout(drawerTimer);
       drawerTimer = setTimeout(closeDrawers, 8000);
     });
 
-    // Settings sliders
+    // Update 4 — Glass Opacity slider drives the --bg-alpha CSS variable
+    // (0.30–1.00), NOT a whole-window fade. Text stays 100% opaque.
     opacitySlider.addEventListener('input', () => {
       const val = parseInt(opacitySlider.value, 10);
       opacityValue.innerText = val + '%';
-      ipcRenderer.send('set-opacity', val / 100);
+      document.documentElement.style.setProperty('--bg-alpha', (val / 100).toFixed(2));
     });
 
-    fontSizeSlider.addEventListener('input', () => {
-      const val = parseInt(fontSizeSlider.value, 10);
-      fontSizeValue.innerText = val + 'px';
-      answerBox.style.fontSize = val + 'px';
+    // Update 4 — Font Size A− / A+ buttons adjust the clamp base via --font-scale.
+    let fontScale = 1;
+    function adjustFontScale(delta) {
+      fontScale = Math.min(1.5, Math.max(0.75, Math.round((fontScale + delta * 0.1) * 100) / 100));
+      document.documentElement.style.setProperty('--font-scale', String(fontScale));
+      fontValue.innerText = Math.round(fontScale * 100) + '%';
+    }
+
+    // Update 4 — the Settings drawer flips between the settings panel and the
+    // keyboard-shortcuts panel ("View Keyboard Shortcuts →" / "← Back").
+    function openSettingsPanel(which) {
+      const settingsPanel = document.getElementById('settings-panel');
+      const shortcutsPanel = document.getElementById('shortcuts-panel');
+      settingsPanel.style.display = which === 'settings' ? 'block' : 'none';
+      shortcutsPanel.style.display = which === 'shortcuts' ? 'block' : 'none';
+    }
+
+    function flipSettingsPanel() {
+      const shortcutsPanel = document.getElementById('shortcuts-panel');
+      openSettingsPanel(shortcutsPanel.style.display === 'none' ? 'shortcuts' : 'settings');
+    }
+
+    // Update 4 — Focus Mode: hide header + action pill for distraction-free
+    // reading; the floating Exit Focus chip restores the UI.
+    function toggleFocus() {
+      card.classList.toggle('focus-mode');
+    }
+
+    // Update 4 — Liquid Layout: below 500×300 the UI switches to compact mode
+    // (hides Clear/Retry in the action pill via [data-compact="true"]).
+    const compactObserver = new ResizeObserver(() => {
+      const compact = window.innerWidth < 500 || window.innerHeight < 300;
+      if (compact) document.documentElement.dataset.compact = 'true';
+      else delete document.documentElement.dataset.compact;
     });
+    if (document.body) compactObserver.observe(document.body);
 
     // Freeform resize handles: drag any edge/corner to resize the window.
     function wireResizeHandle(id, mode) {
@@ -1224,7 +1635,7 @@
     // Hotkeys
     // ------------------------------------------------------------
     // Update 2 — shared action dispatcher. Both the global hotkeys (main.js →
-    // 'hotkey' IPC) and the classy action-bar buttons call runAction(), so a
+    // 'hotkey' IPC) and the floating-pill buttons call runAction(), so a
     // button always does exactly what its Alt-key twin does.
     function runAction(action, payload) {
       if (action === 'clear-text') {
@@ -1255,8 +1666,11 @@
         badge.style.background = newMode === 'architect' ? '#F59E0B' : '#3B82F6';
         badge.style.color = newMode === 'architect' ? '#0F172A' : '#FFFFFF';
       } else if (action === 'toggle-shortcuts') {
-        toggleDrawer('shortcuts-drawer');
+        // Update 4 — the shortcuts grid now lives inside the Settings drawer.
+        openSettingsPanel('shortcuts');
+        toggleDrawer('settings-drawer');
       } else if (action === 'toggle-settings') {
+        openSettingsPanel('settings');
         toggleDrawer('settings-drawer');
       } else if (action === 'toggle-mic') {
         // Phase 10 Part 1 — Candidate Audio Capture: start/stop the physical
@@ -1270,7 +1684,7 @@
         if (payload) {
           if (!candidateMicRunning) {
             startCandidateAudio(
-              (text) => engine.handleCandidateText(text),
+              (msg) => engine.handleCandidateText(msg.text, msg.isFinal),
               { apiKey: deepgramKey }
             ).then((handle) => {
               candidateMicHandle = handle;

@@ -46,6 +46,14 @@ function round2(n) {
   return Math.round(n * 100) / 100;
 }
 
+// Nearest-rank percentile (0..1) of a numeric array; null for empty input.
+function percentile(arr, p) {
+  if (!arr || !arr.length) return null;
+  const sorted = arr.slice().sort((a, b) => a - b);
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.round(sorted.length * p) - 1));
+  return round2(sorted[idx]);
+}
+
 // ISO-8601 wall-clock timestamp WITH local timezone offset:
 //   2026-08-13T22:58:31.123+05:30
 function isoWithOffset(d) {
@@ -77,6 +85,38 @@ const ALWAYS_EVENTS = new Set([
   'LOG_ROTATED'
 ]);
 
+// STEP 9 — Pilot privacy mode. When privacy === 'pilot', keys whose values
+// could carry a candidate's spoken words / interview content are stripped from
+// every event. Timing, state, provider, latency, fallback, confidence, and
+// aggregate metric fields are preserved, so the session timeline remains
+// analysable without persisting sensitive transcript content.
+// An explicit allow-list of content keys (rather than a substring regex) so
+// metric keys such as cloudAnswers / answerLatencyP90Ms / transcriptLoggingEnabled
+// are never accidentally stripped.
+const PRIVACY_STRIP_KEYS = new Set([
+  'transcript',
+  'currentTranscript',
+  'initialTranscript',
+  'previousText',
+  'newText',
+  'previousBuffer',
+  'newBuffer',
+  'candidate',
+  'question',
+  'q',
+  'answer',
+  'content',
+  'prompt',
+  'text',
+  'buffer',
+  'expected',
+  'spoken',
+  'phrase',
+  'sentence',
+  'interim',
+  'utterance'
+]);
+
 class DiagnosticLogger {
   constructor(opts) {
     opts = opts || {};
@@ -88,6 +128,9 @@ class DiagnosticLogger {
     this.txtEnabled = opts.txtEnabled !== false;
     this.domain = opts.domain || '';
     this.mode = opts.mode || 'normal'; // 'diagnostic' | 'normal'
+    // STEP 9 — Pilot privacy: 'debug' (default; logs transcript content for dev
+    // analysis) | 'pilot' (strips candidate/transcript content, keeps metrics).
+    this.privacy = opts.privacy || 'debug';
 
     this.nowMonotonic = typeof opts.nowMonotonic === 'function' ? opts.nowMonotonic : defaultMonotonic;
     this.nowWall = typeof opts.nowWall === 'function' ? opts.nowWall : Date.now;
@@ -108,6 +151,7 @@ class DiagnosticLogger {
     this._baseTxt = '';
 
     this._marks = new Map();      // turnId -> { markName: elapsedMs }
+    this._turnStartMs = new Map(); // turnId -> elapsedMs at TURN_STARTED (for answer latency)
     this._stats = {
       turns: 0,
       snapshots: 0,
@@ -120,7 +164,13 @@ class DiagnosticLogger {
       clears: 0,
       errors: 0,
       warnings: 0,
-      snapshotLatencies: []
+      snapshotLatencies: [],
+      // STEP 9 — provider / source breakdown + answer latencies
+      localScenarioHits: 0,
+      cloudAnswers: 0,
+      emergencyFallbacks: 0,
+      providerFallbacks: 0,
+      answerLatencies: []
     };
   }
 
@@ -165,7 +215,9 @@ class DiagnosticLogger {
           `# started:   ${isoWithOffset(d)}`,
           `# domain:    ${this.domain}`,
           `# mode:      ${this.mode}`,
-          '# NOTE: transcript content is intentionally logged (developer test mode).',
+          this.privacy === 'pilot'
+            ? '# privacy:   PILOT (transcript/content stripped; metrics only).'
+            : '# NOTE: transcript content is intentionally logged (developer test mode).',
           '# Source of truth: ' + fileBase + '.jsonl',
           ''
         ].join('\n');
@@ -184,7 +236,8 @@ class DiagnosticLogger {
       maxBytes: this.maxBytes,
       flushMs: this.flushMs,
       diagnosticsVerbose: this.verbose,
-      transcriptLoggingEnabled: true
+      privacy: this.privacy,
+      transcriptLoggingEnabled: this.privacy !== 'pilot'
     });
     this._scheduleFlush();
     return this;
@@ -272,14 +325,24 @@ class DiagnosticLogger {
 
   flush() {
     if (!this._started || !this.enabled) return Promise.resolve();
+    // A background flush may still be awaiting its async appendFile; wait for it
+    // before deciding there is nothing to do, so callers can rely on flush()
+    // resolving only after every event up to that point is on disk.
+    if (this._writePromise) {
+      return this._writePromise.then(() => this.flush());
+    }
     if (!this._buffer.length) return Promise.resolve();
     const lines = this._buffer.splice(0);
-    return this._writeLines(lines).catch((err) => {
-      // never break the application because the log disk failed
-      this._lastError = err;
-      this._emitNow('ERROR', { error: String(err && err.message || err), context: 'diagnostic_flush' });
-      this._scheduleFlush(250); // retry once later
-    });
+    const write = this._writeLines(lines)
+      .catch((err) => {
+        // never break the application because the log disk failed
+        this._lastError = err;
+        this._emitNow('ERROR', { error: String(err && err.message || err), context: 'diagnostic_flush' });
+        this._scheduleFlush(250); // retry once later
+      })
+      .then(() => { this._writePromise = null; });
+    this._writePromise = write;
+    return write;
   }
 
   async _writeLines(lines) {
@@ -315,6 +378,7 @@ class DiagnosticLogger {
     }
     const elapsedMs = this.nowMonotonic() - this._startMonotonic;
     const lat = this._stats.snapshotLatencies;
+    const ansLat = this._stats.answerLatencies;
     const summary = {
       sessionDurationMs: round2(elapsedMs),
       turns: this._stats.turns,
@@ -329,6 +393,14 @@ class DiagnosticLogger {
       averageSnapshotLatencyMs: lat.length ? round2(lat.reduce((a, b) => a + b, 0) / lat.length) : null,
       minSnapshotLatencyMs: lat.length ? round2(Math.min.apply(null, lat)) : null,
       maxSnapshotLatencyMs: lat.length ? round2(Math.max.apply(null, lat)) : null,
+      // STEP 9 — provider / source breakdown + answer latency percentiles
+      localScenarioHits: this._stats.localScenarioHits,
+      cloudAnswers: this._stats.cloudAnswers,
+      emergencyFallbacks: this._stats.emergencyFallbacks,
+      providerFallbacks: this._stats.providerFallbacks,
+      answerLatencyP50Ms: percentile(ansLat, 0.5),
+      answerLatencyP90Ms: percentile(ansLat, 0.9),
+      answerLatencyP95Ms: percentile(ansLat, 0.95),
       errors: this._stats.errors,
       warnings: this._stats.warnings,
       rotations: this._rotations
@@ -354,7 +426,22 @@ class DiagnosticLogger {
 
   _updateStats(eventType, data) {
     switch (eventType) {
-      case 'TURN_STARTED': this._stats.turns += 1; break;
+      case 'TURN_STARTED':
+        this._stats.turns += 1;
+        if (data && data.turnId) this._turnStartMs.set(data.turnId, this.nowMonotonic() - this._startMonotonic);
+        break;
+      case 'ANSWER_DELIVERED': {
+        const source = data && data.source;
+        if (source === 'local-scenario-bank' || source === 'rag-only-fallback') this._stats.localScenarioHits += 1;
+        else if (source === 'emergency') this._stats.emergencyFallbacks += 1;
+        else this._stats.cloudAnswers += 1;
+        if (data && data.turnId) {
+          const start = this._turnStartMs.get(data.turnId);
+          if (start != null) this._stats.answerLatencies.push(this.nowMonotonic() - this._startMonotonic - start);
+        }
+        break;
+      }
+      case 'PROVIDER_FALLBACK': this._stats.providerFallbacks += 1; break;
       case 'QUESTION_SNAPSHOT_CREATED': this._stats.snapshots += 1; break;
       case 'FOLLOWUP_DETECTED': this._stats.followUps += 1; break;
       case 'BOUNDARY_DECISION':
@@ -378,6 +465,8 @@ class DiagnosticLogger {
     const out = {};
     for (const key of Object.keys(obj)) {
       if (SECRET_KEY_PATTERN.test(key)) continue; // drop secret-named fields entirely
+      // STEP 9 — pilot privacy: drop candidate/transcript content keys too.
+      if (this.privacy === 'pilot' && PRIVACY_STRIP_KEYS.has(key)) continue;
       let v = obj[key];
       if (typeof v === 'function' || typeof v === 'undefined' || typeof v === 'symbol') continue;
       if (typeof v === 'string') {

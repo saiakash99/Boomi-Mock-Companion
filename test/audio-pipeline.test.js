@@ -98,4 +98,53 @@ check('startCandidateAudio rejects when the Deepgram API key is missing', async 
   }
 });
 
+// STEP 13 — Deepgram frames must arrive as { text, isFinal } so the engine can
+// hold interims and append each final exactly once (no transcript duplication).
+check('startCandidateAudio forwards {text, isFinal} frames for engine dedupe', async () => {
+  const flush = () => new Promise(r => setImmediate(r));
+  const originals = {
+    WebSocket: global.WebSocket,
+    MediaRecorder: global.MediaRecorder,
+    navigator: Object.getOwnPropertyDescriptor(global, 'navigator')
+  };
+  let socket;
+  class FakeWebSocket {
+    constructor(url, protocols) { socket = this; this.readyState = 0; this.url = url; }
+    open() { this.readyState = 1; if (this.onopen) this.onopen(); }
+    close() { this.readyState = 3; }
+  }
+  FakeWebSocket.OPEN = 1;
+  function FakeMediaRecorder() { this.state = 'inactive'; }
+  FakeMediaRecorder.prototype.start = function () { this.state = 'recording'; };
+  FakeMediaRecorder.prototype.stop = function () { this.state = 'inactive'; };
+  FakeMediaRecorder.isTypeSupported = () => true;
+
+  try {
+    global.WebSocket = FakeWebSocket;
+    global.MediaRecorder = FakeMediaRecorder;
+    Object.defineProperty(global, 'navigator', { value: { mediaDevices: { getUserMedia: () => Promise.resolve({ getTracks: () => [{ stop: () => {} }] }) } }, configurable: true });
+
+    const received = [];
+    const pending = startCandidateAudio((frame) => received.push(frame), { apiKey: 'test-key' });
+    await flush();          // getUserMedia().then runs -> socket created
+    socket.open();          // resolves the returned handle
+    const handle = await pending;
+    assert.ok(handle && typeof handle.stop === 'function', 'resolves with a stop handle');
+
+    socket.onmessage({ data: JSON.stringify({ type: 'Results', is_final: false, channel: { alternatives: [{ transcript: 'I would use a' }] } }) });
+    socket.onmessage({ data: JSON.stringify({ type: 'Results', is_final: true, channel: { alternatives: [{ transcript: 'I would use a Process Property' }] } }) });
+    socket.onmessage({ data: JSON.stringify({ type: 'Results', is_final: true, channel: { alternatives: [{ transcript: '   ' }] } }) });
+
+    assert.strictEqual(received.length, 2, 'empty transcripts dropped, got ' + received.length);
+    assert.deepStrictEqual(received[0], { text: 'I would use a', isFinal: false }, 'interim forwarded with isFinal=false');
+    assert.deepStrictEqual(received[1], { text: 'I would use a Process Property', isFinal: true }, 'final forwarded with isFinal=true');
+    handle.stop();
+  } finally {
+    global.WebSocket = originals.WebSocket;
+    global.MediaRecorder = originals.MediaRecorder;
+    if (originals.navigator) Object.defineProperty(global, 'navigator', originals.navigator);
+    else delete global.navigator;
+  }
+});
+
 console.log('\n== AUDIO PIPELINE REGRESSION TEST ==');

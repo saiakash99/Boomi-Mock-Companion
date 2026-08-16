@@ -528,6 +528,79 @@ async function main() {
     assert.ok(!all.some(e => e.eventType === 'BOUNDARY_DECISION'), 'boundary decisions suppressed');
   });
 
+  console.log('\n== STEP 9 — Pilot privacy mode ==');
+
+  await checkAsync('privacy=pilot strips transcript/content keys but keeps metrics', async () => {
+    const dir = makeDir();
+    const l = makeLogger(dir, { privacy: 'pilot' });
+    l.start();
+    l.emit('TRANSCRIPT_INTERIM', { transcript: 'my spoken words', elapsedMs: 12 });
+    l.emit('QUESTION_SNAPSHOT_CREATED', { turnId: 'turn_001', transcript: 'snapshot words', candidate: 'cand', confidence: 'yellow' });
+    l.emit('BOUNDARY_DECISION', { decision: 'FINALIZE', transcript: 'should vanish', reason: 'pause' });
+    l.emit('PROVIDER_FALLBACK', { provider: 'gemini', reason: 'rate', latencyMs: 400 });
+    l.emit('ANSWER_DELIVERED', { turnId: 'turn_001', source: 'cloud', latencyMs: 800 });
+    l.emit('ERROR', { error: 'boom', context: 'final_answer' });
+    l.end();
+    const lines = await readLines(l.jsonlPath);
+    const all = lines.map(JSON.parse);
+    assert.ok(all.some(e => e.eventType === 'TRANSCRIPT_INTERIM'), 'transcript event retained as an event');
+    const interim = all.find(e => e.eventType === 'TRANSCRIPT_INTERIM');
+    assert.ok(!('transcript' in interim), 'transcript key stripped in pilot mode');
+    const snap = all.find(e => e.eventType === 'QUESTION_SNAPSHOT_CREATED');
+    assert.ok(!('transcript' in snap) && !('candidate' in snap), 'content keys stripped');
+    assert.strictEqual(snap.confidence, 'yellow', 'metrics preserved');
+    assert.strictEqual(snap.turnId, 'turn_001', 'turn context preserved');
+    const fallback = all.find(e => e.eventType === 'PROVIDER_FALLBACK');
+    assert.strictEqual(fallback.provider, 'gemini', 'provider metric preserved');
+    const delivered = all.find(e => e.eventType === 'ANSWER_DELIVERED');
+    assert.strictEqual(delivered.source, 'cloud', 'source metric preserved');
+    const sum = all.find(e => e.eventType === 'SESSION_SUMMARY');
+    assert.ok(sum, 'SESSION_SUMMARY present');
+    assert.strictEqual(sum.cloudAnswers, 1, 'cloud answer counted');
+    assert.strictEqual(sum.providerFallbacks, 1, 'provider fallback counted');
+    assert.ok(sum.answerLatencyP50Ms >= 0, 'answer latency percentile present');
+    const started = all.find(e => e.eventType === 'SESSION_STARTED');
+    assert.strictEqual(started.privacy, 'pilot', 'privacy flag surfaced');
+    assert.strictEqual(started.transcriptLoggingEnabled, false, 'transcript logging disabled flag');
+  });
+
+  await checkAsync('privacy=debug (default) keeps transcript content', async () => {
+    const dir = makeDir();
+    const l = makeLogger(dir);
+    l.start();
+    l.emit('TRANSCRIPT_INTERIM', { transcript: 'my spoken words' });
+    l.end();
+    const all = (await readLines(l.jsonlPath)).map(JSON.parse);
+    const interim = all.find(e => e.eventType === 'TRANSCRIPT_INTERIM');
+    assert.strictEqual(interim.transcript, 'my spoken words', 'content retained in debug mode');
+    const started = all.find(e => e.eventType === 'SESSION_STARTED');
+    assert.strictEqual(started.privacy, 'debug');
+    assert.strictEqual(started.transcriptLoggingEnabled, true);
+  });
+
+  await checkAsync('SESSION_SUMMARY aggregates source breakdown for a mixed session', async () => {
+    const dir = makeDir();
+    const l = makeLogger(dir);
+    l.start();
+    l.emit('TURN_STARTED', { turnId: 'turn_001' });
+    l.emit('ANSWER_DELIVERED', { turnId: 'turn_001', source: 'local-scenario-bank' });
+    l.emit('TURN_STARTED', { turnId: 'turn_002' });
+    l.emit('ANSWER_DELIVERED', { turnId: 'turn_002', source: 'cloud' });
+    l.emit('TURN_STARTED', { turnId: 'turn_003' });
+    l.emit('ANSWER_DELIVERED', { turnId: 'turn_003', source: 'emergency' });
+    l.emit('TURN_STARTED', { turnId: 'turn_004' });
+    l.emit('ANSWER_DELIVERED', { turnId: 'turn_004', source: 'rag-only-fallback' });
+    l.emit('PROVIDER_FALLBACK', { provider: 'gemini' });
+    l.end();
+    const sum = (await readLines(l.jsonlPath)).map(JSON.parse).find(e => e.eventType === 'SESSION_SUMMARY');
+    assert.strictEqual(sum.turns, 4);
+    assert.strictEqual(sum.localScenarioHits, 2, 'local + rag-only counted as local hits');
+    assert.strictEqual(sum.cloudAnswers, 1);
+    assert.strictEqual(sum.emergencyFallbacks, 1);
+    assert.strictEqual(sum.providerFallbacks, 1);
+    assert.ok(typeof sum.answerLatencyP50Ms === 'number' && sum.answerLatencyP50Ms >= 0, 'answer latency percentile is a non-negative number');
+  });
+
   console.log('\n== Engine -> logger integration (real pipeline scenario) ==');
 
   await checkAsync('engine emits full diag timeline for a pause-then-complete question', async () => {

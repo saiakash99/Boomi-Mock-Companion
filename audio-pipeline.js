@@ -99,7 +99,10 @@ function startCandidateAudio(onCandidateTranscript, { apiKey, domain = 'Boomi', 
           if (msg.type === 'Results') {
             const transcript = msg.channel && msg.channel.alternatives && msg.channel.alternatives[0] && msg.channel.alternatives[0].transcript;
             if (transcript && String(transcript).trim().length > 0 && typeof onCandidateTranscript === 'function') {
-              onCandidateTranscript(String(transcript));
+              // Interim + final frames carry the same utterance; forward the
+              // is_final flag so the engine can replace interims and append
+              // the final exactly once (no transcript duplication).
+              onCandidateTranscript({ text: String(transcript), isFinal: !!msg.is_final });
             }
           }
         } catch (e) {

@@ -11,7 +11,7 @@
 // ============================================================
 
 const assert = require('assert');
-const { InterviewEngine, STATES, DEFAULT_CFG, analyzeQuestion, classifyQuestionType, wordDelta, normalizeTranscript, parseJsonObject, toConfidence, classifySemanticChange, isShortFollowup } = require('../engine.js');
+const { InterviewEngine, STATES, DEFAULT_CFG, analyzeQuestion, classifyQuestionType, wordDelta, normalizeTranscript, parseJsonObject, toConfidence, classifySemanticChange, isShortFollowup, isQuestionStart } = require('../engine.js');
 
 let passed = 0;
 let failed = 0;
@@ -165,6 +165,17 @@ async function main() {
     const a = analyzeQuestion('How would you handle a large volume of records in Boomi?', {});
     assert.ok(a.isQuestion, 'should be a question');
     assert.ok(a.score >= 55, 'score should clear confirm threshold, got ' + a.score);
+  });
+
+  // STEP 13 — regression guard for the word-boundary classifier fix: bare
+  // substrings ("can you", "is", ...) anywhere in the transcript must never
+  // score a declarative statement as a question.
+  check('isQuestionStart rejects declarative statements containing interrogative words', () => {
+    assert.strictEqual(isQuestionStart('You can use an Atom for this...'), false, '"can you" must not match mid-statement');
+    assert.strictEqual(isQuestionStart('The main difference is that Boomi scales out.'), false, '"is that" must not match mid-statement');
+    assert.strictEqual(isQuestionStart('I used the API to send the payload.'), false, 'plain statement is not a question');
+    assert.strictEqual(isQuestionStart('What is a Process Property?'), true, 'true question still detected');
+    assert.strictEqual(isQuestionStart('How would you handle retries?'), true, 'true question still detected');
   });
 
   // ============================================================
@@ -583,10 +594,10 @@ async function main() {
   console.log('\n== Error resilience ==');
   // ============================================================
 
-  await checkAsync('Groq failure -> ERROR state, engine alive, later transcript retries', async () => {
+  await checkAsync('Groq failure -> emergency answer (no ERROR freeze), engine alive, later transcript retries', async () => {
     const timer = makeTimer();
     const mocks = makeMockCalls();
-    const engine = makeEngine(timer, mocks);
+    const engine = makeEngine(timer, mocks, { openersEnabled: false });
     engine.start();
     engine.processTranscript('What is a Process Property in Boomi?', true);
     timer.advance(1000);
@@ -594,7 +605,11 @@ async function main() {
     const inFlight = mocks.calls.answer[mocks.calls.answer.length - 1];
     inFlight.deferred.reject(new Error('Groq 500'));
     await flush();
-    assert.strictEqual(engine.state, STATES.ERROR);
+    // STEP 7 — never freeze in ERROR: an instant local emergency answer is
+    // delivered and the engine stays alive (no provider/API/error wording).
+    assert.notStrictEqual(engine.state, STATES.ERROR, 'engine must never freeze in ERROR on API failure');
+    assert.ok(engine.currentAnswer, 'an emergency answer was delivered');
+    assert.ok(!/groq|gemini|api|timeout|network|error/i.test(engine.currentAnswer), 'emergency answer never mentions the provider/failure: ' + engine.currentAnswer);
 
     // later, the interviewer extends/refines the question -> clean retry
     engine.processTranscript('What is a Process Property in Boomi and how do you set it?', true);
@@ -836,10 +851,10 @@ async function main() {
   });
 
   // ============================================================
-  console.log('\n== 3-tier question candidates ==');
+  console.log('\n== fast-path question candidate ==');
   // ============================================================
 
-  await checkAsync('candidates parsed, ranked; primary drives answer prompt', async () => {
+  await checkAsync('candidates parsed, sliced to primary; primary drives answer prompt', async () => {
     const timer = makeTimer();
     const mocks = makeMockCalls();
     const engine = makeEngine(timer, mocks);
@@ -849,7 +864,7 @@ async function main() {
     await flush();
     mocks.resolveNextFast('{"topic":"volume","type":"scenario","direction":"Focus on batching and parallel processing","hint":"b -> p","candidates":[{"interpretation":"High-volume Boomi processing","confidence":"HIGH"},{"interpretation":"Performance tuning","confidence":"MEDIUM"},{"interpretation":"Architecture design","confidence":"LOW"}]}');
     await flush();
-    assert.strictEqual(engine.candidates.length, 3);
+    assert.strictEqual(engine.candidates.length, 1);
     assert.strictEqual(engine.candidates[0].confidence, 'HIGH');
     assert.strictEqual(engine.candidates[0].priority, 1);
     assert.strictEqual(engine.primary.text, 'High-volume Boomi processing');
@@ -882,7 +897,7 @@ async function main() {
     assert.strictEqual(normalizeTranscript('Tell me about Boomi API and SFTP'), 'Tell me about Boomi API and SFTP');
   });
 
-  check('parseJsonObject extracts 3-tier candidates', () => {
+  check('parseJsonObject extracts candidates', () => {
     const obj = parseJsonObject('{"topic":"x","type":"scenario","direction":"d","hint":"h","candidates":[{"interpretation":"A","confidence":"HIGH"},{"interpretation":"B","confidence":"MEDIUM"}]}');
     assert.strictEqual(obj.candidates.length, 2);
     assert.strictEqual(obj.candidates[0].interpretation, 'A');
@@ -1349,6 +1364,74 @@ async function main() {
     assert.ok(mocks.answerCount() >= 1, 'empty bank -> normal Groq path');
   });
 
+  // STEP 13 — scored-retrieval thresholds (STEP 8): STRONG >= 0.8 answers
+  // locally; sub-STRONG but >= WEAK_FLOOR matches inject grounding hints
+  // instead of guessing a canned answer.
+  check('STRONG threshold: sub-0.8 scores never answer locally', () => {
+    const engine = new InterviewEngine({ scenarioBank, openersEnabled: false });
+    assert.strictEqual(engine._searchLocalScenarios('what property'), null, '0.5 stays below STRONG 0.8');
+    assert.strictEqual(engine._searchLocalScenarios('difference atom'), null, '0.5 below STRONG -> no canned answer');
+  });
+
+  check('WEAK floor: sub-STRONG matches still surface as context hints', () => {
+    const engine = new InterviewEngine({ scenarioBank, openersEnabled: false });
+    const hints = engine._searchLocalContext('what property');
+    assert.strictEqual(hints.length, 1, '0.5 clears the 0.3 WEAK floor');
+    assert.strictEqual(hints[0].answer, scenarioBank[1].answer);
+    assert.ok(hints[0].score >= 0.3 && hints[0].score < 0.8, 'hint score stays in the weak band');
+    assert.strictEqual(engine._searchLocalContext('How do you approach error recovery planning at scale?').length, 0, 'no keyword overlap -> no hints');
+  });
+
+  // RAG-First — the >85% local-match gate runs at the top of the request
+  // lifecycle and must bypass the cloud entirely, while a miss (or a local-RAG
+  // error) falls through to the existing provider chain.
+  check('_ragFirstSearch returns the local answer only above the 85% threshold', () => {
+    const engine = new InterviewEngine({ scenarioBank, openersEnabled: false });
+    const hit = engine._ragFirstSearch('What is the difference between an Atom and a Molecule?');
+    assert.ok(hit && hit.answer === scenarioBank[0].answer, '4/4 keywords (1.00) clears the 0.85 RAG-first gate');
+    assert.ok(hit.score >= 0.85, 'reported score is at/above 0.85');
+    const fuzzy = engine._ragFirstSearch('difference between atom');
+    assert.ok(fuzzy && fuzzy.answer === scenarioBank[0].answer, '3/4 keywords + phrase bonus (0.90) also clears 0.85');
+    assert.strictEqual(engine._ragFirstSearch('what property'), null, '0.65 stays below 0.85 -> no instant local answer');
+    assert.strictEqual(engine._ragFirstSearch('What is an Atom?'), null, '0.25 below 0.85 -> no instant local answer');
+  });
+
+  check('_ragFirstSearch honors a configurable ragFirstThreshold', () => {
+    const engine = new InterviewEngine({ scenarioBank, openersEnabled: false, cfg: { ragFirstThreshold: 0.95 } });
+    assert.strictEqual(engine._ragFirstSearch('difference between atom'), null, '0.90 < 0.95 config -> no hit');
+    assert.ok(engine._ragFirstSearch('What is the difference between an Atom and a Molecule?'), '1.00 still clears 0.95');
+  });
+
+  check('_ragFirstSearch falls back to null on a malformed scenario bank (local-RAG error)', () => {
+    const engine = new InterviewEngine({ scenarioBank: [{ id: 'broken', keywords: 'not-an-array', answer: 'x' }], openersEnabled: false });
+    assert.strictEqual(engine._ragFirstSearch('anything at all'), null, 'scoring error degrades to null, never throws');
+  });
+
+  await checkAsync('RAG-first >85% match bypasses the cloud entirely (fast + answer = 0)', async () => {
+    const timer = makeTimer();
+    const mocks = makeMockCalls();
+    const engine = makeEngine(timer, mocks, { openersEnabled: false, scenarioBank });
+    let finalText = '';
+    engine.onAnswer = ({ text, provisional }) => { if (!provisional) finalText = text; };
+    engine.start();
+    engine.processTranscript('What is the difference between an Atom and a Molecule?', true);
+    timer.advance(1000);
+    await flush();
+    assert.strictEqual(mocks.fastCount(), 0, 'no fast-path cloud classification for a >85% RAG hit');
+    assert.strictEqual(mocks.answerCount(), 0, 'no answer API call for a >85% RAG hit');
+    assert.strictEqual(finalText, scenarioBank[0].answer, 'final answer comes from the local bank');
+    assert.strictEqual(engine.state, STATES.READY);
+  });
+
+  check('hints are injected into the provider prompt as CANDIDATE LOCAL CONTEXT', () => {
+    const engine = new InterviewEngine({ scenarioBank, openersEnabled: false });
+    const withHint = engine.buildAnswerPrompt('what property', 'base');
+    assert.ok(withHint[0].content.includes('[CANDIDATE LOCAL CONTEXT]'), 'weak matches become grounding hints');
+    assert.ok(withHint[0].content.includes(scenarioBank[1].answer), 'hint carries the related Boomi knowledge');
+    const noHint = engine.buildAnswerPrompt('How do you approach error recovery planning at scale?', 'base');
+    assert.ok(!noHint[0].content.includes('[CANDIDATE LOCAL CONTEXT]'), 'no weak match -> no grounding block');
+  });
+
   // ============================================================
   // Phase 10 Part 1 — Candidate Audio Capture (engine side)
   // ============================================================
@@ -1372,6 +1455,25 @@ async function main() {
     engine.handleCandidateText('to parameterize the shape.');
     assert.ok(engine.candidateTranscript.includes('Process Property'), 'first fragment appended');
     assert.ok(engine.candidateTranscript.includes('parameterize'), 'second fragment appended');
+  });
+
+  // STEP 13 — Deepgram frames: interims are held (never appended), a final is
+  // appended exactly once, and a re-sent duplicate final is ignored.
+  check('handleCandidateText holds interims and appends each final exactly once', () => {
+    const engine = new InterviewEngine({});
+    engine.candidateAnalysisEnabled = true;
+    engine.handleCandidateText('I used a', false);           // interim
+    engine.handleCandidateText('I used a Process Property', false); // refined interim
+    assert.strictEqual(engine.candidateTranscript, '', 'interims never appended');
+    assert.strictEqual(engine.candidateInterim, 'I used a Process Property', 'interim held for live display');
+    engine.handleCandidateText('I used a Process Property', true); // final == last interim
+    assert.strictEqual(engine.candidateTranscript, 'I used a Process Property', 'final appended once');
+    engine.handleCandidateText('I used a Process Property', true); // duplicate final
+    assert.strictEqual(engine.candidateTranscript, 'I used a Process Property', 'duplicate final ignored');
+    assert.strictEqual(engine.candidateInterim, '', 'interim cleared after final');
+    engine.handleCandidateText('to parameterize the shape', true);
+    assert.strictEqual(engine.candidateTranscript, 'I used a Process Property to parameterize the shape', 'second final appended once');
+    assert.strictEqual(engine.candidateLastFinal, 'to parameterize the shape', 'last-final tracked for dedupe');
   });
 
   // ============================================================

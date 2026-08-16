@@ -1,0 +1,244 @@
+{
+  "_meta": {
+    "description": "Chaos Simulator scenario bank — brutal, real-world Senior Architect interview conditions (STT phonetic drift, cross-module ambiguity, context switching, Hinglish code-switching, spoken syntax, sarcasm, multi-turn anaphora) run headless against the REAL engine (engine.js, hybrid router) and the REAL Master Scenario Bank (knowledge/scenarios.json, 312 entries). No microphone, no DOM, no modifications to index/main/audio/provider code.",
+    "routingValues": ["LOCAL_RAG", "CLOUD_API", "EMERGENCY", "NONE", "NO_MATCH"],
+    "runWith": "npm run test:chaos",
+    "chunkFields": {
+      "chunks": "array of transcript strings streamed in order via engine.processTranscript(text, isFinal)",
+      "holdMs": "optional parallel array: simulated silence AFTER each chunk (ms). Missing = 300ms (non-final) / 900ms (final, lets the pause watchdog fire the boundary).",
+      "answerBehavior": "ok = providers resolve; fail = every provider rejects (provider blackout).",
+      "expectedNoMidAnswer": "true = no answer may be delivered before the final chunk (linguistic-lock assertion)."
+    }
+  },
+  "scenarios": [
+    {
+      "id": "homophone_hijack",
+      "name": "The Homophone Hijack",
+      "theme": "STT phonetic drift",
+      "chunks": ["So Adam... I mean the Boomi item... when you deploy to the cue management in the molecule..."],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "normalize phonetic drift (Adam->Atom, cue->queue); the indirect 'when you deploy' form must still be classified as a question and routed to the cloud (no LOCAL scenario covers deploy/queue-management in a Molecule)."
+    },
+    {
+      "id": "cross_module_hydra",
+      "name": "The Cross-Module Hydra",
+      "theme": "cross-module ambiguity",
+      "chunks": ["Flow calls an API gateway, mastered in MDM, using B2B EDI. Where is the transaction boundary?"],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "advanced module override: the API gateway + MDM + B2B EDI compound question must NOT short-circuit to any single-module LOCAL scenario; it should defer to the cloud for the cross-module transaction-boundary answer."
+    },
+    {
+      "id": "filler_flood",
+      "name": "The Filler Flood",
+      "theme": "filler extraction",
+      "chunks": ["Umm, basically, like, difference between, you know, atom and, like, molecule?"],
+      "expectedRouting": "LOCAL_RAG",
+      "expectedBehavior": "extract the core intent (atom vs molecule) through the filler noise; LOCAL atom_vs_molecule intercept scores 1.00."
+    },
+    {
+      "id": "phantom_keyword",
+      "name": "The Phantom Keyword",
+      "theme": "fake keyword",
+      "chunks": ["Explain the Boomi quantum connector."],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "reject the fabricated 'quantum connector' (no such Boomi component); the lone real keyword 'connector' must not over-trigger a LOCAL scenario."
+    },
+    {
+      "id": "mid_answer_context_switch",
+      "name": "The Mid-Answer Context Switch",
+      "theme": "context switching",
+      "chunks": [
+        "Explain Atom Cloud.",
+        "Actually, forget that. Let's talk about Molecule split-brain."
+      ],
+      "holdMs": [500],
+      "expectedRouting": "CLOUD_API",
+      "expectedAborts": 1,
+      "expectedBehavior": "abort any draft for chunk 1 and pivot cleanly to chunk 2 (Molecule split-brain has no strong LOCAL hit -> cloud)."
+    },
+    {
+      "id": "interrupted_question",
+      "name": "The Interrupted Question (Linguistic Lock)",
+      "theme": "trailing-connector lock",
+      "chunks": [
+        "What is the difference between an",
+        "What is the difference between an Atom and a Molecule"
+      ],
+      "holdMs": [900],
+      "expectedNoMidAnswer": true,
+      "expectedRouting": "LOCAL_RAG",
+      "expectedBehavior": "trailing 'an' must LOCK the boundary (never finalize a grammatically incomplete question, even on a long pause); the completed question routes to LOCAL atom_vs_molecule."
+    },
+    {
+      "id": "rapid_double_question",
+      "name": "The Rapid Double Question",
+      "theme": "fast re-ask / draft supersede",
+      "chunks": [
+        "How do you handle retries and error handling",
+        "Actually wait what is the difference between atom and molecule"
+      ],
+      "expectedRouting": "LOCAL_RAG",
+      "expectedAborts": 1,
+      "expectedBehavior": "a draft for chunk 1 is already in flight (retries/error handling scores 66, above draftThreshold); when chunk 2 lands as a fresh turn ('what is'), that draft must be superseded/aborted and the pivot routes to LOCAL atom_vs_molecule."
+    },
+    {
+      "id": "process_property_word_salad",
+      "name": "The Process Property Word Salad",
+      "theme": "compound wording",
+      "chunks": ["So the process property what is it and how do you set it across environments"],
+      "expectedRouting": "LOCAL_RAG",
+      "expectedBehavior": "extract the intent (process property) from messy compound phrasing; LOCAL process_property intercept scores 0.80 (strong, unambiguous)."
+    },
+    {
+      "id": "provider_blackout",
+      "name": "The Provider Blackout",
+      "theme": "provider outage",
+      "chunks": ["How do you handle large volume records in Boomi"],
+      "answerBehavior": "fail",
+      "expectedRouting": "EMERGENCY",
+      "expectedBehavior": "when every provider fails the engine must NEVER freeze: it delivers the instant local emergency response (ANSWER_DELIVERED source 'emergency') and stays alive for the next question."
+    },
+    {
+      "id": "compound_comparison_squint",
+      "name": "The Compound Comparison Squint",
+      "theme": "over-eager local hit",
+      "chunks": ["Explain the difference between a molecule and an atom cloud"],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "the compound 'atom cloud' phrasing is not a clean atom-vs-molecule comparison; an ideal engine defers to the cloud. Expect the LOCAL atom_vs_molecule intercept (1.00) to over-fire here — a resilience gap to surface."
+    },
+    {
+      "id": "hinglish_code_switch",
+      "name": "The Language Labyrinth (Hinglish)",
+      "theme": "code-switching",
+      "chunks": [
+        "So in Boomi, when we do aapas mein data mapping ",
+        "between source aur target with nulls, ",
+        "toh kaise handle karein?"
+      ],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "code-switching (Hinglish) still crosses the pause-boundary auto-answer (soft, score 49) and routes to the cloud; no LOCAL scenario covers aapas-mein data mapping with nulls."
+    },
+    {
+      "id": "code_aloud_null",
+      "name": "The Code Aloud Catastrophe",
+      "theme": "spoken syntax",
+      "chunks": [
+        "If I have map dot star, open parens string one close parens, ",
+        "and input is less than greater than null, ",
+        "should I use set properties to handle that null?"
+      ],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "syntax spoken aloud (map.*, string1, <>, null) merges into ONE turn — the reworded final chunk avoids the 'how do' fresh-turn split that would drop the null-check context. The merged null-check question is not a clean set_properties hit (length penalty drops it to ~0.73) so it defers to the cloud."
+    },
+    {
+      "id": "false_premise_mdh",
+      "name": "The False Premise Trap",
+      "theme": "loaded premise",
+      "chunks": [
+        "Right, so Data Hub doesn't actually persist any golden records, ",
+        "it is just a virtual index over source systems, correct?"
+      ],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "a loaded premise ('Data Hub doesn't persist golden records') must route to the cloud so the model can challenge/correct it (MDH local hits stay sub-STRONG at 0.6); the 'correct?' tag must NOT be mistaken for sarcasm by the rhetorical filter."
+    },
+    {
+      "id": "sarcasm_rhetorical",
+      "name": "The Rhetorical Non-Question (Sarcasm Filter)",
+      "theme": "sarcasm / rhetorical",
+      "chunks": ["Oh sure, because everyone just loves debugging Groovy scripts in Boomi at 2am, right?"],
+      "expectedRouting": "NO_MATCH",
+      "expectedBehavior": "dismissive sarcasm ('everyone just loves' / 'at 2am') is NOT a real question — the Chaos Patch 2 rhetorical filter returns wait at the boundary and no answer is generated."
+    },
+    {
+      "id": "number_salad_port",
+      "name": "The Number Salad",
+      "theme": "spoken numbers",
+      "chunks": [
+        "We are seeing errors on port eighty eighty, ",
+        "and atom is on ten dot zero dot zero dot five... ",
+        "is this a firewall or listener config problem?"
+      ],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "spoken numbers (eighty/eighty ~ 8080, ten dot zero dot zero dot five ~ 10.0.0.5) resolve to a diagnostic troubleshooting question; no LOCAL scenario hits the port/firewall/listener cluster so it routes to the cloud."
+    },
+    {
+      "id": "anti_pattern_molecule",
+      "name": "The Negative Space (Anti-Pattern)",
+      "theme": "inverted knowledge",
+      "chunks": [
+        "What is the worst possible way to configure a Molecule for HA? ",
+        "I do not want best practices, I want the anti-pattern."
+      ],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "the anti-pattern request must NOT be answered by the LOCAL high_availability scenario (0.48, sub-STRONG); it inverts knowledge in the cloud to list what NOT to do."
+    },
+    {
+      "id": "impossible_requirement",
+      "name": "The Impossible Requirement",
+      "theme": "unrealistic constraints",
+      "chunks": [
+        "Design an architecture with Boomi, Salesforce, and DB ",
+        "that guarantees exactly-once processing with zero duplicate risk and zero latency."
+      ],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "the leading imperative 'Design' is now a question starter (+50 -> score ~74); the impossible constraints (zero latency / zero duplicate risk) must be challenged in the cloud rather than silently accepted."
+    },
+    {
+      "id": "acronym_stack",
+      "name": "The Acronym Avalanche",
+      "theme": "multi-module acronyms",
+      "chunks": [
+        "How do you configure an APM API on AM ",
+        "with MDM and EDI behind a Molecule?"
+      ],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "the multi-module acronym stack (APM/AM/MDM/EDI) has no single-module LOCAL winner (top ~0.28) — it defers to the cloud."
+    },
+    {
+      "id": "multi_turn_anaphora",
+      "name": "The Multi-Turn Anaphora (Pronoun Memory)",
+      "theme": "anaphora resolution",
+      "chunks": [
+        "How does Molecule clustering handle node failure?",
+        "Okay... and what about under heavy queue load?",
+        "And does that same behavior apply to private Atom Clouds?"
+      ],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "the anaphora chain ('that same behavior' = node failure under heavy queue load) resolves across successive fresh turns; no turn has a strong LOCAL hit (top ~0.22) so the chain routes to the cloud."
+    },
+    {
+      "id": "policy_pretzel_vault",
+      "name": "The Policy Pretzel (Strict Constraint)",
+      "theme": "constraint satisfaction",
+      "chunks": [
+        "Our security mandates no credentials in Boomi vault at all, ",
+        "must use Azure Key Vault with 15-minute token rotation. ",
+        "How do you design the Salesforce connection?"
+      ],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "the hard security constraint (no Boomi vault; Azure Key Vault + 15-minute rotation) means the Salesforce-connection design must NOT fall back to a default vault answer; no LOCAL hit >= 0.8 -> cloud."
+    },
+    {
+      "id": "deprecated_containers",
+      "name": "The Deprecated Doppelganger",
+      "theme": "historical terminology",
+      "chunks": [
+        "In legacy AtomSphere we deployed to containers. ",
+        "How does the old container deployment model differ from modern Molecules?"
+      ],
+      "expectedRouting": "CLOUD_API",
+      "expectedBehavior": "historical terminology (legacy AtomSphere containers) disambiguates from modern Molecules; no LOCAL scenario matches the container-vs-molecule comparison (top ~0.35) -> cloud."
+    },
+    {
+      "id": "echo_repetition",
+      "name": "The Echo Repetition",
+      "theme": "echo / repetition collapse",
+      "chunks": [
+        "How do you handle retries in a sub-process? ",
+        "Retries... yeah, how do you handle retries in a sub-process?"
+      ],
+      "expectedRouting": "LOCAL_RAG",
+      "expectedBehavior": "the echo repetition collapses into a single clean turn (chunk 2 is a continuation, not a fresh split) and the retry-in-sub-process intent hits the new boomi_subprocess_retry local scenario (1.00) -> LOCAL fast-path."
+    }
+  ]
+}

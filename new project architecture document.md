@@ -1518,3 +1518,20 @@ The core engine follows:
 The ultimate goal is:
 
 > A realistic, confidence-building mock interview experience where the application understands the interviewer in real time and gives the candidate a natural, relevant answer with the smallest practical delay.
+
+---
+
+## Appendix H - Controlled-Pilot Hardening (v2.0.0)
+
+The Core MVP (Phases 1-12 + Update 1) was hardened into a controlled-pilot-ready release without a rewrite. Changes:
+
+1.  Question classifier (engine.js): isQuestionStart() word-boundary detection replaces substring matching.
+2.  Candidate transcript dedupe (engine.js + audio-pipeline.js): {text, isFinal} forwarding with last-final dedupe.
+3.  Multi-provider router (provider-router.js, new): Groq-first -> Gemini failover, per-provider circuit breaker, 500ms TTFT budget (first chunk clears it; streaming continues under total timeout), half-open probe recovery, error classification, lazy API keys. index.html routes all LLM calls through callWithFallback.
+4.  Emergency local fallback (engine.js): instant type-aware local response on ANY provider failure; engine never freezes; next question proceeds normally. Emergency wording never references the provider/API/timeout.
+5.  Scenario bank repaired + ranked retrieval: knowledge/scenarios.json rebuilt to a single valid 311-entry array (was 2 concatenated arrays, unparseable). _searchLocalScenarios scores by keyword coverage + phrase bonus + type alignment; strong matches (>=0.8) answer locally, weak matches (0.3-0.65) inject [CANDIDATE LOCAL CONTEXT] hints instead of guessing.
+6.  Pilot privacy diagnostics: DIAGNOSTICS_PRIVACY=debug|pilot; pilot mode strips candidate transcript/content keys (explicit allow-list) while preserving timing/provider/latency/confidence metrics; SESSION_SUMMARY gains localScenarioHits/cloudAnswers/emergencyFallbacks/providerFallbacks + answer-latency percentiles.
+7.  Minimal functional UI polish: low-confidence indicator is neutral slate (not alarming red); larger live-question line; auto-scroll re-engages per new answer; ~60ms render-only streaming throttle.
+8.  Branding: productName "Boomi Companion" + generated logo assets (scripts/generate-logo.js) with win.icon; appId unchanged.
+
+Pilot readiness is classified at the end of the hardening release (STEP 14) as BLOCKED | READY FOR INTERNAL TEST | READY FOR CONTROLLED PILOT.

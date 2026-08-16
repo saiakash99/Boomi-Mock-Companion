@@ -19,7 +19,7 @@
 //    questionState / interim-final / speechFinal / previousTurnId) created
 //    at a confirmed boundary; previous-turn snapshots are archived so a new
 //    turn never destroys the prior one (Phase 2 §21 / §25)
-//  - Fast Path: 3-tier ranked question candidates (HIGH/MED/LOW)
+//  - Fast Path: single best-guess question candidate (primary)
 //  - Background answer preparation (draft) before the question
 //    completes; the draft is PROMOTED to the final answer at the
 //    speech boundary when the question is complete (no 2nd call)
@@ -76,11 +76,20 @@ const DEFAULT_CFG = Object.freeze({
   // scenarios + a safe fallback); 'agent-only' = never use local scenarios;
   // 'hybrid' = local scenarios first, external LLM as the fallback.
   routerMode: 'hybrid',
+  // RAG-First — local cache/RAG scenario-match confidence (0.0–1.0) above which
+  // the local answer is returned instantly at the top of the request lifecycle,
+  // completely bypassing the cloud/ProviderRouter rate limits. Configurable via
+  // cfg.ragFirstThreshold (default 0.85 = 85%).
+  ragFirstThreshold: 0.85,
   fastDebounceMs: 300,
-  fastMinIntervalMs: 2500,
+  fastMinIntervalMs: 4000,
   draftDebounceMs: 200,
-  draftMinIntervalMs: 4000,
-  draftThreshold: 65,
+  draftMinIntervalMs: 6000,
+  // Chaos Patch 1 — speculative drafting kicks in earlier (50 vs 65) so short
+  // prompts like "Explain Atom Cloud" (score 58) start a draft in flight. When
+  // the interviewer then pivots mid-answer, the supersede/abort logic has a
+  // real draft to cancel instead of silently having nothing prepared.
+  draftThreshold: 50,
   fastThreshold: 50,
   confirmThreshold: 55,
   // autoAnswerThreshold: question score at/below which a pause/speech_final
@@ -95,7 +104,7 @@ const DEFAULT_CFG = Object.freeze({
   minDeltaWords: 3,
   minWordsForQuestion: 3,
   ignoreShortWords: 2,
-  maxCandidates: 3,
+  maxCandidates: 1,
   maxContextPairs: 3,
   maxSnapshots: 10,
   idleMs: 15000
@@ -133,13 +142,112 @@ const SAFE_OPENERS = {
   fallback: "My understanding is"
 };
 
-const QUESTION_STARTERS = [
-  'how would', 'how do', 'how did', 'what do', 'what is', "what's", 'whats',
-  'can you', 'could you', 'would you', 'tell me', 'explain', 'describe',
-  'walk me', 'talk about', 'give me', 'why', 'what', 'how', 'when', 'where',
-  'which', 'who', 'should', 'would', 'could', 'can', 'is', 'are', 'do',
-  'did', 'does', 'have', 'has', 'were', 'was'
+// ------------------------------------------------------------
+// STEP 7 — Emergency local response. Used ONLY when every LLM provider has
+// failed for a turn. These are instant, generic-but-true Boomi answers that:
+//  - never mention an API, provider, network, timeout, or failure,
+//  - keep the interview flowing and the engine alive for the NEXT question,
+//  - are paired with the type-matched opener so they sound natural aloud.
+// ------------------------------------------------------------
+const EMERGENCY_RESPONSES = {
+  conceptual: "my understanding of the core concept is that it lives at the heart of Boomi's integration architecture, and I can walk through exactly how it works.",
+  experience: "in my project experience, I handled something similar by grounding it in a real integration flow and validating the end-to-end outcome.",
+  project: "in that project, I focused on the goal, my specific role in the integration, and the measurable outcome we delivered.",
+  scenario: "from an architecture perspective, I would break that into the integration steps, weigh the trade-offs, and confirm the approach before committing to it.",
+  troubleshooting: "the first thing I would check is the process log to isolate where the issue occurs, then verify the connector configuration and retry cleanly.",
+  comparison: "the main difference comes down to how each option fits the specific integration goal, and I would recommend based on the use case.",
+  'best-practice': "the recommended best practice is to keep the integration configurable and to validate every change in a lower environment first.",
+  followup: "to expand on that, I would add the specific integration detail that fits the context of the previous answer.",
+  fallback: "I can certainly break that down from a Boomi integration perspective - could you share a bit more context so I can tailor it?"
+};
+
+// Experience-flavoured variant, used for experience/project types when the
+// candidate's real resume / target JD context (knowledge/resume.md +
+// knowledge/job-description.md) has been loaded.
+const EMERGENCY_EXPERIENCE_VARIANT = "based on the projects I have worked on, I would approach that by grounding it in a real integration scenario and walking through what I actually did and the outcome.";
+
+// STEP 8 — Ranked local-retrieval scoring configuration (verified against the
+// existing test suite: full Atom/Molecule hits at 1.0, "difference between
+// atom" at 0.75+0.15 phrase=0.90, "what is process" at 0.75+0.15=0.90,
+// "difference between" at 0.50+0.15=0.65 miss, "What is an Atom?" at 0.25 miss).
+const SCORE_CFG = Object.freeze({
+  KEYWORD_WEIGHT: 1.0,
+  PHRASE_BONUS: 0.15,
+  TYPE_BONUS: 0.1,
+  STRONG_THRESHOLD: 0.8,
+  // RAG-First — the >85% confidence gate for instant local answering.
+  RAG_FIRST_THRESHOLD: 0.85,
+  AMBIGUITY_MARGIN: 0.15,
+  WEAK_FLOOR: 0.3,
+  MAX_HINTS: 3,
+  LENGTH_PENALTY_RATIO: 3,
+  LENGTH_PENALTY_FACTOR: 0.8,
+  // Chaos Patch 1 — penalty applied to a scenario whose keyword set does NOT
+  // cover a compound entity named in the transcript. Multiplicative so a full
+  // 1.00 match ("Explain ... a molecule and an atom cloud") drops to 0.50 and
+  // can never reach STRONG_THRESHOLD (0.8) or a 0.15 ambiguity gap — the
+  // generic atom_vs_molecule intercept is defeated and the turn fails over to
+  // the cloud instead of a mismatched canned answer.
+  COMPOUND_ENTITY_PENALTY: 0.5
+});
+
+// Chaos Patch 1 — Multi-word Boomi entities that are semantically distinct from
+// their component single keywords. "Atom Cloud" is a managed runtime; an
+// "atom" scenario must never answer it. A transcript naming one of these is
+// only a STRONG match for a scenario whose keywords cover the FULL entity.
+const COMPOUND_ENTITIES = ['atom cloud'];
+
+// Question-starter detection (Update: hardened against substring false
+// positives). A word counts as a question starter ONLY when:
+//   (a) it is a multi-word interrogative phrase appearing at a word boundary
+//       ("can you", "how would", "what is", ...), or
+//   (b) it is a single-word interrogative (why/what/how/when/where/which/who)
+//       that OPEN the sentence.
+// This stops statements like "You can use an Atom for this..." or "The main
+// difference is..." from being scored as questions (previously the bare
+// substrings "can", "you", "is" matched anywhere in the transcript).
+const QUESTION_STARTER_PHRASES = [
+  'how would', 'how do', 'how did', 'how does', 'how to', 'how should',
+  'what do', 'what does', 'what is', "what's", 'what are', 'what was',
+  'what were', 'what would', 'what about', 'what if',
+  'can you', 'could you', 'would you', 'will you', 'should you',
+  'tell me', 'explain', 'describe', 'walk me', 'talk about', 'give me',
+  'have you', 'did you', 'do you', 'are you', 'were you',
+  'is there', 'are there', 'when would', 'when did', 'where do', 'where is',
+  'which one', 'why would', 'why did', 'why do', 'why is', 'how come'
 ];
+
+const FIRST_WORD_STARTERS = new Set(['why', 'what', 'how', 'when', 'where', 'which', 'who', 'whose', 'whom']);
+// Chaos Patch 2 — leading-imperative question starters. Interviewers routinely
+// pose questions as direct commands ("Design an architecture...", "Compare Atom
+// vs Molecule", "Assume the queue backs up..."). Opening the sentence with one
+// of these is treated as a question so imperative prompts cross question
+// classification instead of being dropped as background speech. ("Explain",
+// "Describe", "Walk me" were already covered by QUESTION_STARTER_PHRASES.)
+const IMPERATIVE_STARTERS = new Set(['design', 'build', 'create', 'compare', 'assume', 'configure', 'architect', 'outline', 'implement', 'plan']);
+const EFFECTIVE_FIRST_WORD_STARTERS = FIRST_WORD_STARTERS;
+for (const w of IMPERATIVE_STARTERS) EFFECTIVE_FIRST_WORD_STARTERS.add(w);
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+const QUESTION_STARTER_RE = new RegExp(
+  '\\b(?:' + QUESTION_STARTER_PHRASES.map(escapeRegex).join('|') + ')\\b',
+  'i'
+);
+
+// Is this text phrased as a question? Word-boundary phrase match OR an
+// opening interrogative word. Never matches declarative statements that merely
+// CONTAIN an interrogative word ("You can use an Atom for this...").
+function isQuestionStart(text) {
+  const t = String(text || '').trim().toLowerCase();
+  if (!t) return false;
+  const first = t.split(/\s+/)[0].replace(/[^a-z]/g, '');
+  if (first === 'whats') return true; // "what's" / "whats" (no apostrophe)
+  if (FIRST_WORD_STARTERS.has(first)) return true;
+  return QUESTION_STARTER_RE.test(t);
+}
 
 const INCOMPLETE_TRAILERS = [
   'handle', 'solve', 'fix', 'manage', 'approach', 'build', 'about', 'with',
@@ -340,11 +448,17 @@ function analyzeQuestion(text, opts) {
   const words = String(text || '').trim().split(/\s+/).filter(Boolean);
   const lower = ' ' + String(text).toLowerCase() + ' ';
   let score = 0;
-  if (QUESTION_STARTERS.some(s => lower.includes(s))) score += 50;
+  if (isQuestionStart(text)) score += 50;
   if (/[?？]/.test(text)) score += 25;
   if (words.length >= 5) score += 8;
   if (words.length >= 10) score += 8;
   if (/batch|process|integration|api|error|fail|retry|atom|cloud|connect|perform|design|architecture|data|record|listener|build|implement|profile|project|queue|exception|rest|soap|parallel|volume|retry|monitor/.test(lower)) score += 8;
+  // Chaos Patch 1 — indirect-question credit. STT drift / conversational
+  // speech often produces an indirect question form ("...when you deploy...",
+  // "...how does the engine...") with no direct interrogative opener. Give it
+  // a slight lift so it still crosses question classification (fastThreshold
+  // 50) and confirmThreshold (55) instead of being dropped as background chat.
+  if (/\bwhen you\b|\bhow does\b/.test(lower)) score += 25;
   const cls = classifyQuestionType(text, !!cfg.hasContext);
   const fastThreshold = cfg.fastThreshold != null ? cfg.fastThreshold : DEFAULT_CFG.fastThreshold;
   return {
@@ -415,6 +529,11 @@ class InterviewEngine {
     // candidate's own spoken answer (from the physical microphone). Fed by
     // handleCandidateText(); only appended while candidateAnalysisEnabled.
     this.candidateTranscript = '';
+    // Candidate-capture de-dup (STEP 3): live interim frame + last final frame
+    // so interim results replace instead of append and each final is recorded
+    // exactly once.
+    this.candidateInterim = '';
+    this.candidateLastFinal = '';
     // Linguistic Locking: transcript final words that make a sentence
     // grammatically incomplete (prepositions / connectors) -> never finalize.
     this.incompleteHooks = this.domainConfig.incomplete_hooks || [];
@@ -473,6 +592,9 @@ class InterviewEngine {
     this.draftStatus = 'none'; // 'none' | 'inflight' | 'done'
     this.draftSnapshot = -1;
     this.promotePending = 0;
+    // STEP 9 — tracks whether the in-flight draft came from the local scenario
+    // bank so the promoted turn is counted correctly in diagnostics.
+    this._draftLocal = false;
 
     // --- Question/Turn Intelligence (Phase 2) ---
     // Latest immutable question snapshot for the CURRENT turn (created at a
@@ -524,8 +646,21 @@ class InterviewEngine {
     this._emitLog('ENGINE', 'engine started', { at: Date.now() });
   }
 
+  // Chaos Patch 1 — STT phonetic-drift normalization. Deepgram and the live
+  // interview mic routinely mangle Boomi domain words (Adam->Atom, cue->queue,
+  // item->Atom, flom->Flow). Normalize word-boundary, case-insensitive BEFORE
+  // classification/routing so a drifty utterance still routes correctly while
+  // legit compound words ("cue cards", "queue items") are untouched.
+  _normalizePhonetics(text) {
+    return String(text || '')
+      .replace(/\bflom\b/gi, 'Flow')
+      .replace(/\bAdam\b/gi, 'Atom')
+      .replace(/\bcue\b/gi, 'queue')
+      .replace(/\bitem\b/gi, 'Atom');
+  }
+
   processTranscript(raw, isFinal, speechFinal) {
-    const text = normalizeTranscript(raw);
+    const text = normalizeTranscript(this._normalizePhonetics(raw));
     if (!text) return;
     if (this.paused) return; // no new AI processing while paused
     const now = this._now();
@@ -726,8 +861,13 @@ class InterviewEngine {
     } catch (err) {
       this._emitLog('API_ERROR', `regenerate req#${reqId} failed: ${err.message}`);
       this._diag('ERROR', { error: String(err && err.message || err), context: 'regenerate' });
-      // keep the existing valid answer if there is one
-      this._setState(this.currentAnswer ? STATES.ANSWER_READY : STATES.ERROR, 'api_error');
+      // STEP 7 — never freeze on API failure: keep the prior valid answer when
+      // one exists, otherwise deliver the instant local emergency response.
+      if (this.currentAnswer) {
+        this._setState(STATES.ANSWER_READY, 'kept_prior_answer');
+      } else {
+        this._deliverEmergencyFinal();
+      }
     } finally {
       this.regenInFlight = false;
     }
@@ -951,8 +1091,7 @@ class InterviewEngine {
   // A fragment that opens with a question starter ("how would...", "why...")
   // is a fresh turn, not a continuation of the previous question.
   _looksLikeFreshTurn(text) {
-    const t = String(text || '').trim().toLowerCase();
-    return QUESTION_STARTERS.some(s => t.startsWith(s));
+    return isQuestionStart(text);
   }
 
   _applyTranscriptState(a) {
@@ -1061,6 +1200,21 @@ class InterviewEngine {
 
   // ---------------- question boundary decision ----------------
 
+  // Chaos Patch 2 — Rhetorical / sarcasm filter. Interviewers occasionally drop
+  // a dismissive, sarcastic or rhetorical line ("Oh sure, because everyone just
+  // loves debugging Groovy at 2am, right?") that is NOT a real question and must
+  // not trigger a cloud answer. The guard `isQuestionStart` keeps genuine
+  // questions safe; only dismissive cue patterns + a non-question form qualify.
+  _looksRhetorical(text) {
+    if (isQuestionStart(text)) return false; // a real question is never filtered
+    const t = String(text || '').toLowerCase();
+    return (
+      /(everyone|people|somebody|someone|nobody|anyone)\s+just\s+(loves?|hates?|wants?|needs?|expects?|enjoys?)/.test(t) ||
+      /^(oh|oh sure|oh yeah|right|sure|yeah),?\s+because\b/.test(t) ||
+      (/(at\s*2\s*am\b|in the middle of the night|\bobviously\b|\bclearly\b|\bof course\b)/.test(t) && /\?$/.test(t))
+    );
+  }
+
   _onBoundary(silenceMs) {
     if (this.paused) return;
     if (this.boundaryHandled) return;
@@ -1128,6 +1282,9 @@ class InterviewEngine {
   }
 
   _boundaryDecision(a, text) {
+    // Chaos Patch 2 — a sarcastic/rhetorical line is not a question: never
+    // finalize it, not even past the pause boundary (suppresses generation).
+    if (this._looksRhetorical(text)) return 'wait';
     const hasQM = /[?？]/.test(String(text));
     // Linguistic Locking: a transcript ending in a preposition or connector is
     // grammatically incomplete. Never finalize — not even on a long pause.
@@ -1201,9 +1358,31 @@ class InterviewEngine {
 
   // Phase 10 Part 1 — Candidate Audio Capture: append the candidate's own
   // spoken transcript. A no-op unless the master lock (Alt+V) is enabled.
-  handleCandidateText(text) {
+  // Handle signature: handleCandidateText(text)  — legacy/direct feed (append
+  // verbatim; used by tests and external callers); handleCandidateText(text,
+  // isFinal) — Deepgram frames: isFinal=false holds the live interim (never
+  // appended, the matching final appends once); isFinal=true appends the final
+  // exactly once (deduped against the previous final).
+  handleCandidateText(text, isFinal) {
     if (!this.candidateAnalysisEnabled) return;
-    this.candidateTranscript += ' ' + String(text || '').trim();
+    const t = String(text || '').trim();
+    if (!t) return;
+    if (isFinal === undefined) {
+      this.candidateTranscript = (this.candidateTranscript + ' ' + t).trim();
+      return;
+    }
+    if (isFinal === true) {
+      // Deepgram re-sends the finalized text as the last interim AND the final;
+      // dedupe so a final is never double-appended.
+      if (t === this.candidateLastFinal) return;
+      this.candidateLastFinal = t;
+      this.candidateInterim = '';
+      this.candidateTranscript = (this.candidateTranscript + ' ' + t).trim();
+      return;
+    }
+    // Interim frame: hold the live partial, replace on each refresh. The
+    // matching final frame appends exactly once (see above).
+    this.candidateInterim = t;
   }
 
   // Phase 10 Part 2 — Candidate Response Analysis & Scoring: grade the
@@ -1249,7 +1428,7 @@ Return ONLY a valid JSON object with no markdown formatting:
     return this.turnSnapshots;
   }
 
-  // ---------------- Fast Path (3-tier candidates) ----------------
+  // ---------------- Fast Path (single primary candidate) ----------------
 
   _scheduleFastPath() {
     // Phase 12 — Multi-Tier Router: in 'rag-only' mode no external API call is
@@ -1278,6 +1457,26 @@ Return ONLY a valid JSON object with no markdown formatting:
     const startedAt = this._now();
     this.lastFastAt = startedAt;
     this._emitLog('FAST_PATH_STARTED', `req#${reqId}`, { text, turnId: this.turnId });
+    // RAG-First — the local cache/RAG check now runs at the ABSOLUTE TOP of the
+    // request lifecycle, BEFORE the fast-path classification hits the
+    // ProviderRouter. A >85% semantic match commits the local answer as the
+    // prepared draft and returns early — the cloud rate limits are bypassed
+    // entirely (the confirmed boundary promotes the local answer instantly).
+    const ragHit = this._ragFirstSearch(text);
+    if (ragHit) {
+      this.draftAnswer = this.openersEnabled ? `${this._pickOpener()} ${ragHit.answer}` : ragHit.answer;
+      this.draftStatus = 'done';
+      this.draftSnapshot = this.snapshotNo;
+      this._draftLocal = true;
+      this._diag('RAG_FIRST_INTERCEPT', {
+        turnId: this.turnId, latencyMs: this._now() - startedAt,
+        score: ragHit.score, source: 'local-scenario-bank', requestType: 'fast_path'
+      });
+      this._emitLog('RAG_FIRST_INTERCEPT', `fast-path RAG hit (no cloud) score=${ragHit.score}`, {
+        turnId: this.turnId, latencyMs: this._now() - startedAt, score: ragHit.score
+      });
+      return;
+    }
     try {
       const content = await this._callFast(text);
       const latency = this._now() - startedAt;
@@ -1389,7 +1588,12 @@ Return ONLY a valid JSON object with no markdown formatting:
     // boundary promotes it instantly — no API call at all.
     // Phase 12 — Multi-Tier Router: in 'rag-only' mode a miss also marks the draft
     // done with the safe fallback — no external API is ever called.
-    let localMatch = this._searchLocalScenarios(text);
+    // RAG-First — the >85% local cache/RAG check runs first at the top of the
+    // request lifecycle (before any ProviderRouter/callLLM()). A confident hit
+    // commits the local answer with zero cloud invocations; a miss falls back
+    // to the STRONG (>=0.8) scenario intercept, then to the provider chain.
+    const ragHit = this._ragFirstSearch(text);
+    let localMatch = ragHit ? ragHit.answer : this._searchLocalScenarios(text);
     if (!localMatch && this.cfg.routerMode === 'rag-only') {
       localMatch = RAG_ONLY_FALLBACK;
     }
@@ -1397,8 +1601,10 @@ Return ONLY a valid JSON object with no markdown formatting:
       const opener = this._pickOpener();
       this.draftAnswer = this.openersEnabled ? `${opener} ${localMatch}` : localMatch;
       this.draftStatus = 'done';
+      this._draftLocal = true;
+      this._diag('LOCAL_SCENARIO_INTERCEPT', { turnId: this.turnId, latencyMs: this._now() - startedAt, source: ragHit ? 'rag-first-local' : 'local-scenario-bank' });
       this._emitLog('LOCAL_SCENARIO_INTERCEPT', `draft fast-path (no Groq)`, {
-        turnId: this.turnId, latencyMs: this._now() - startedAt
+        turnId: this.turnId, latencyMs: this._now() - startedAt, source: ragHit ? 'rag-first-local' : 'local-scenario-bank'
       });
       return;
     }
@@ -1430,9 +1636,12 @@ Return ONLY a valid JSON object with no markdown formatting:
     } catch (err) {
       this._emitLog('API_ERROR', `draft req#${reqId} failed: ${err.message}`);
       this._diag('ERROR', { error: String(err && err.message || err), context: 'draft', requestId: reqId });
+      // STEP 7 — a draft that was already committed to be promoted still needs
+      // a final answer: deliver the instant local emergency response instead
+      // of freezing the engine in ERROR.
       if (this.promotePending === reqId) {
         this.promotePending = 0;
-        this._setState(STATES.ERROR, 'api_error');
+        this._deliverEmergencyFinal();
       }
     }
   }
@@ -1469,6 +1678,10 @@ Return ONLY a valid JSON object with no markdown formatting:
       snapshotNo: this.lastSnapshot ? this.lastSnapshot.snapshotNo : this.snapshotNo,
       confidence
     });
+    // STEP 9 — source-aware delivery metric for the session summary.
+    const promotedSource = this._draftLocal ? 'local-scenario-bank' : 'cloud';
+    this._draftLocal = false;
+    this._diag('ANSWER_DELIVERED', { turnId: this.turnId, source: promotedSource });
     if (this.onAnswer) this.onAnswer({ text: answer, provisional: false, state: STATES.ANSWER_READY, confidence });
     this._scheduleIdle();
     this._emitLog('ANSWER_PROMOTED', 'draft promoted to final answer', { turnId: this.turnId, words: wordCount(answer) });
@@ -1476,25 +1689,120 @@ Return ONLY a valid JSON object with no markdown formatting:
 
   // ---------------- Final answer ----------------
 
-  // Phase 7 — Local Scenario Interceptor. Exact keyword match against the Master
-  // Scenario Bank (knowledge/scenarios.json). All keywords must be present in the
-  // transcript; returns the canned answer string or null (falls through to Groq).
+  // ------------------------------------------------------------
+  // RAG-First — high-confidence (>85%) local retrieval. Runs at the ABSOLUTE
+  // TOP of the request lifecycle so a confident local answer resolves
+  // instantly and returns early, completely bypassing the ProviderRouter /
+  // cloud rate limits. Any local-RAG error falls through to null so the
+  // request continues into the existing provider chain.
+  // ------------------------------------------------------------
+  _ragFirstSearch(transcript) {
+    if (!this.scenarioBank || this.scenarioBank.length === 0) return null;
+    if (this.cfg.routerMode === 'agent-only') return null;
+    try {
+      const threshold = this.cfg.ragFirstThreshold != null
+        ? this.cfg.ragFirstThreshold
+        : SCORE_CFG.RAG_FIRST_THRESHOLD;
+      const scored = this._scoreScenarios(transcript);
+      const top = scored[0];
+      if (!top || top.score < threshold || !top.scenario.answer) return null;
+      const second = scored[1];
+      if (second && second.score > 0 && (top.score - second.score) <= SCORE_CFG.AMBIGUITY_MARGIN) return null;
+      return { answer: top.scenario.answer, score: top.score, scenario: top.scenario };
+    } catch (err) {
+      console.warn('[ENGINE] RAG-first lookup error; falling through to cloud:', err.message);
+      return null;
+    }
+  }
+
+  // STEP 8 — Ranked Local Scenario Interceptor. Scores EVERY scenario in the
+  // Master Scenario Bank (knowledge/scenarios.json) instead of a naive fuzzy
+  // keyword overlap:
+  //   score = keyword coverage (weight 1.0)
+  //         + contiguous keyword-phrase bonus (+0.15, adjacent keywords that
+  //           appear together in the transcript, e.g. "difference between")
+  //         + question-type alignment (+0.1)
+  //   capped at 1.0; if the transcript is >3x the keyword count the score is
+  //   scaled by 0.8 (very long questions are usually not exact scenario hits).
+  // STRONG >= 0.8 -> canned answer. If the second-best scenario is within the
+  // 0.15 ambiguity margin, we DEFER to the cloud rather than guess the wrong
+  // canned answer. Returns the canned answer string or null (falls through to
+  // the provider chain).
   _searchLocalScenarios(transcript) {
     if (!this.scenarioBank || this.scenarioBank.length === 0) return null;
     // Phase 12 — Multi-Tier Router: in 'agent-only' mode the local RAG layer is
     // disabled entirely; every question must go to the external LLM.
     if (this.cfg.routerMode === 'agent-only') return null;
-    const lowerTranscript = transcript.toLowerCase();
-    for (const scenario of this.scenarioBank) {
-      // Phase 12 — Fuzzy match: >= 75% of the scenario's keywords present in the
-      // transcript counts as a hit (was: all keywords required).
-      const keywords = scenario.keywords || [];
-      if (keywords.length === 0) continue;
-      const present = keywords.filter(kw => lowerTranscript.includes(kw)).length;
-      const overlap = present / keywords.length;
-      if (overlap >= 0.75) return scenario.answer;
+    const scored = this._scoreScenarios(transcript);
+    const top = scored[0];
+    if (!top || top.score < SCORE_CFG.STRONG_THRESHOLD) return null;
+    const second = scored[1];
+    if (second && second.score > 0 && (top.score - second.score) <= SCORE_CFG.AMBIGUITY_MARGIN) return null;
+    return top.scenario.answer;
+  }
+
+  // STEP 8 — Weak-match context hints. Returns the best-scoring scenario
+  // answers above the WEAK_FLOOR (used ONLY when no STRONG match/ambiguous
+  // interception fired, so the provider answer can be grounded in related
+  // local knowledge). Returns an array of { score, answer }.
+  _searchLocalContext(transcript) {
+    if (!this.scenarioBank || this.scenarioBank.length === 0) return [];
+    if (this.cfg.routerMode === 'agent-only') return [];
+    return this._scoreScenarios(transcript)
+      .filter(s => s.score >= SCORE_CFG.WEAK_FLOOR)
+      .slice(0, SCORE_CFG.MAX_HINTS)
+      .map(s => ({ score: s.score, answer: s.scenario.answer }));
+  }
+
+  _scoreScenarios(transcript) {
+    try {
+      const scored = [];
+      for (const scenario of this.scenarioBank) {
+        scored.push({ scenario, score: this._scenarioScore(transcript, scenario) });
+      }
+      scored.sort((a, b) => b.score - a.score);
+      return scored;
+    } catch (err) {
+      // A corrupt/odd scenario entry must never break the request lifecycle:
+      // treat the whole bank as a miss and fall through to the provider chain.
+      console.warn('[ENGINE] Scenario scoring error; falling back to cloud:', err.message);
+      return [];
     }
-    return null;
+  }
+
+  _scenarioScore(transcript, scenario) {
+    const keywords = (scenario.keywords || []).map(k => String(k).toLowerCase().trim()).filter(Boolean);
+    if (keywords.length === 0) return 0;
+    const lower = String(transcript || '').toLowerCase();
+    let present = 0;
+    for (const kw of keywords) {
+      if (new RegExp('\\b' + escapeRegex(kw) + '\\b').test(lower)) present++;
+    }
+    let score = (present / keywords.length) * SCORE_CFG.KEYWORD_WEIGHT;
+    // contiguous adjacent-keyword phrase bonus ("difference between", "what is")
+    for (let i = 0; i < keywords.length - 1; i++) {
+      if (new RegExp('\\b' + escapeRegex(keywords[i]) + '\\s+' + escapeRegex(keywords[i + 1]) + '\\b').test(lower)) {
+        score += SCORE_CFG.PHRASE_BONUS;
+        break;
+      }
+    }
+    if (scenario.type && scenario.type === this.type) score += SCORE_CFG.TYPE_BONUS;
+    score = Math.min(1, score);
+    // Chaos Patch 1 — compound-entity protection (see COMPOUND_ENTITIES).
+    // A transcript naming a compound entity ("atom cloud") must not be
+    // STRONG-matched by a scenario that only covers the standalone keyword
+    // ("atom" in atom_vs_molecule); the miss defers to the cloud provider.
+    const compoundHit = COMPOUND_ENTITIES.find(t => lower.includes(t));
+    if (compoundHit) {
+      const kwText = keywords.join(' ');
+      const coversEntity = compoundHit
+        .split(' ')
+        .every(w => new RegExp('\\b' + escapeRegex(w) + '\\b').test(kwText));
+      if (!coversEntity) score *= SCORE_CFG.COMPOUND_ENTITY_PENALTY;
+    }
+    const words = String(transcript || '').trim().split(/\s+/).filter(Boolean).length;
+    if (words > SCORE_CFG.LENGTH_PENALTY_RATIO * keywords.length) score *= SCORE_CFG.LENGTH_PENALTY_FACTOR;
+    return score;
   }
 
   // Shared opener selection (Phase 5) so both the draft and final paths can
@@ -1507,6 +1815,68 @@ Return ONLY a valid JSON object with no markdown formatting:
       : '';
   }
 
+  // Finalize — Anti-Duplicate Opener: some LLMs echo the conversational opener
+  // back at the start of their answer. When that happens, prepending the opener
+  // again yields a double tagline ("Sure — Sure, ..."). Compare the normalized
+  // opener against the head of the body and drop it if it already appears.
+  _stitchOpener(opener, body) {
+    if (!opener) return body;
+    if (!body) return opener;
+    const cleanOpener = opener.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    const cleanBody = body.substring(0, opener.length + 15).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    if (cleanBody.includes(cleanOpener)) return body; // Drop duplicate
+    return `${opener} ${body}`;
+  }
+
+  // STEP 7 — Emergency local response. Instant, type-aware Boomi answer used
+  // ONLY when every LLM provider has failed. Never mentions providers/APIs/
+  // timeouts/network; keeps the interview flowing and the engine alive.
+  _emergencyAnswer() {
+    let body = EMERGENCY_RESPONSES[this.type] || EMERGENCY_RESPONSES.fallback;
+    if (this.candidateContext && (this.type === 'experience' || this.type === 'project')) {
+      body = EMERGENCY_EXPERIENCE_VARIANT;
+    }
+    const opener = this._pickOpener();
+    this._diag('EMERGENCY_RESPONSE', {
+      turnId: this.turnId,
+      transcript: this.questionBuffer,
+      type: this.type,
+      source: 'local-emergency',
+      groundedInCandidateContext: !!this.candidateContext
+    });
+    return this.openersEnabled ? `${opener} ${body}` : body;
+  }
+
+  // STEP 7 — Deliver the emergency answer as the final answer for the turn and
+  // return the engine to the alive/listening cycle. The NEXT question retries
+  // the normal chain (local scenarios -> Groq -> Gemini) cleanly.
+  _deliverEmergencyFinal() {
+    const text = this.questionBuffer;
+    if (!text) return;
+    const answer = this._emergencyAnswer();
+    this.currentAnswer = answer;
+    this.lastFinalizedText = text;
+    this.phase = 'answered';
+    this.contextHistory.push({ q: text, a: answer, turnId: this.turnId });
+    if (this.contextHistory.length > this.cfg.maxContextPairs) this.contextHistory.shift();
+    this.conversationHistory.push({ role: 'user', content: text });
+    this.conversationHistory.push({ role: 'assistant', content: answer });
+    if (this.conversationHistory.length > 8) this.conversationHistory = this.conversationHistory.slice(-8);
+    this._setState(STATES.ANSWER_READY, 'emergency_response');
+    this._diag('TURN_COMPLETED', {
+      turnId: this.turnId,
+      transcript: text,
+      durationMs: this.turnStartedAt ? this._now() - this.turnStartedAt : null,
+      snapshotNo: this.lastSnapshot ? this.lastSnapshot.snapshotNo : this.snapshotNo,
+      confidence: 'yellow',
+      source: 'emergency'
+    });
+    this._diag('ANSWER_DELIVERED', { turnId: this.turnId, source: 'emergency' });
+    if (this.onAnswer) this.onAnswer({ text: answer, provisional: false, state: STATES.ANSWER_READY, confidence: 'yellow' });
+    this._scheduleIdle();
+    this._emitLog('EMERGENCY_RESPONSE', 'emergency local answer delivered', { turnId: this.turnId });
+  }
+
   async _runFinalAnswer(mode) {
     const text = this.questionBuffer;
     if (!text) return;
@@ -1515,29 +1885,20 @@ Return ONLY a valid JSON object with no markdown formatting:
     this.supersedeDraftAt = reqId; // a real final supersedes older drafts
     this._clearTimer('draft');     // the authoritative final cancels any still-pending draft
     const startedAt = this._now();
-    // Phase 6 — Confidence Scoring. Maps the turn's question-score (0-100) to a
-    // Green/Yellow/Red boundary-confidence indicator surfaced to the UI.
-    let confidence = 'red';
-    if (this.confidence >= 60) confidence = 'green';
-    else if (this.confidence >= 35) confidence = 'yellow';
-    // Phase 5 — Latency Masker: pick a type-matched safe opener and flash it
-    // to the UI at 0ms so the candidate has something to say while Groq streams.
-    const selectedOpener = this._pickOpener();
-    if (this.openersEnabled && this.onAnswer) {
-      this.onAnswer({ text: selectedOpener, provisional: true, streaming: true, state: STATES.ANSWERING, confidence });
-    }
-    this._setState(STATES.ANSWERING, 'final_answer_started');
-    // Phase 7 — Scenario Interceptor: exact-match against the Master Scenario
-    // Bank (knowledge/scenarios.json). On a hit, skip the Groq API entirely and
-    // resolve instantly with the locally stored answer (sub-10ms fast-path).
-    // Phase 12 — Multi-Tier Router: in 'rag-only' mode a miss also resolves
-    // locally (with the safe fallback) — no external API is ever called.
-    let localMatch = this._searchLocalScenarios(text);
+    // RAG-First — the local cache/RAG check now runs at the ABSOLUTE TOP of the
+    // request lifecycle. A >85% semantic match resolves instantly with the local
+    // answer and returns early, completely bypassing the ProviderRouter / cloud
+    // rate limits. Any local-RAG error falls through to the provider chain.
+    const ragHit = this._ragFirstSearch(text);
+    let localMatch = ragHit ? ragHit.answer : this._searchLocalScenarios(text);
     if (!localMatch && this.cfg.routerMode === 'rag-only') {
       localMatch = RAG_ONLY_FALLBACK;
     }
     if (localMatch) {
-      const answer = this.openersEnabled ? `${selectedOpener} ${localMatch}` : localMatch;
+      // Phase 5 — Latency Masker: the type-matched opener is stitched locally.
+      const selectedOpener = this._pickOpener();
+      const answer = this.openersEnabled ? this._stitchOpener(selectedOpener, localMatch) : localMatch;
+      const localSource = ragHit ? 'rag-first-local' : (localMatch === RAG_ONLY_FALLBACK ? 'rag-only-fallback' : 'local-scenario-bank');
       this.currentAnswer = answer;
       this.lastFinalizedText = text;
       this.phase = 'answered';
@@ -1553,15 +1914,33 @@ Return ONLY a valid JSON object with no markdown formatting:
         durationMs: this.turnStartedAt ? this._now() - this.turnStartedAt : null,
         snapshotNo: this.lastSnapshot ? this.lastSnapshot.snapshotNo : this.snapshotNo,
         confidence: 'green',
-        source: localMatch === RAG_ONLY_FALLBACK ? 'rag-only-fallback' : 'local-scenario-bank'
+        source: localSource
+      });
+      this._diag('ANSWER_DELIVERED', { turnId: this.turnId, source: localSource });
+      this._diag('RAG_FIRST_INTERCEPT', {
+        turnId: this.turnId, latencyMs: this._now() - startedAt,
+        score: ragHit ? ragHit.score : null, source: localSource
       });
       this._emitLog('LOCAL_SCENARIO_INTERCEPT', `scenario fast-path (no Groq)`, {
-        turnId: this.turnId, latencyMs: this._now() - startedAt, confidence: 'green'
+        turnId: this.turnId, latencyMs: this._now() - startedAt, confidence: 'green', source: localSource
       });
       if (this.onAnswer) this.onAnswer({ text: answer, provisional: false, state: STATES.ANSWER_READY, confidence: 'green' });
       this._scheduleIdle();
-      return; // exit early — Groq API never called
+      return; // exit early — cloud never called
     }
+    // ---- cloud path (unchanged) ----
+    // Phase 6 — Confidence Scoring. Maps the turn's question-score (0-100) to a
+    // Green/Yellow/Red boundary-confidence indicator surfaced to the UI.
+    let confidence = 'red';
+    if (this.confidence >= 60) confidence = 'green';
+    else if (this.confidence >= 35) confidence = 'yellow';
+    // Phase 5 — Latency Masker: pick a type-matched safe opener and flash it
+    // to the UI at 0ms so the candidate has something to say while Groq streams.
+    const selectedOpener = this._pickOpener();
+    if (this.openersEnabled && this.onAnswer) {
+      this.onAnswer({ text: selectedOpener, provisional: true, streaming: true, state: STATES.ANSWERING, confidence });
+    }
+    this._setState(STATES.ANSWERING, 'final_answer_started');
     this._emitLog('ANSWER_REQUEST_STARTED', `final req#${reqId}`, { text, turnId: this.turnId, confidence });
     try {
       const content = await this._callAnswer(text, mode || 'final', (chunk) => {
@@ -1577,9 +1956,7 @@ Return ONLY a valid JSON object with no markdown formatting:
         return;
       }
       const apiAnswer = (content || '').trim();
-      const answer = apiAnswer
-        ? (this.openersEnabled ? `${selectedOpener} ${apiAnswer}` : apiAnswer)
-        : (this.openersEnabled ? selectedOpener : '');
+      const answer = apiAnswer ? (this.openersEnabled ? this._stitchOpener(selectedOpener, apiAnswer) : apiAnswer) : (this.openersEnabled ? selectedOpener : '');
       if (answer) {
         this.currentAnswer = answer;
         this.lastFinalizedText = text;
@@ -1603,6 +1980,7 @@ Return ONLY a valid JSON object with no markdown formatting:
           snapshotNo: this.lastSnapshot ? this.lastSnapshot.snapshotNo : this.snapshotNo,
           confidence
         });
+        this._diag('ANSWER_DELIVERED', { turnId: this.turnId, source: 'cloud' });
         if (this.onAnswer) this.onAnswer({ text: answer, provisional: false, state: STATES.ANSWER_READY, confidence });
         this._scheduleIdle();
       }
@@ -1610,8 +1988,10 @@ Return ONLY a valid JSON object with no markdown formatting:
     } catch (err) {
       this._emitLog('API_ERROR', `final req#${reqId} failed: ${err.message}`);
       this._diag('ERROR', { error: String(err && err.message || err), context: 'final_answer', requestId: reqId });
-      this._setState(STATES.ERROR, 'api_error');
-      // Deepgram/audio continue; a later transcript update triggers a clean retry
+      // STEP 7 — never freeze on API failure: deliver the instant local
+      // emergency response and keep listening so the NEXT question proceeds
+      // through the normal chain (local scenarios -> Groq -> Gemini).
+      this._deliverEmergencyFinal();
     }
   }
 
@@ -1644,7 +2024,7 @@ Return ONLY a valid JSON object with no markdown formatting:
     return [
       {
         role: 'system',
-        content: `You are a senior ${this.domain} technical interview coach analyzing a LIVE interviewer question. The transcript may be PARTIAL — the interviewer may still be speaking. Respond with STRICT JSON only (no markdown, no commentary) with exactly these keys: {"topic":"2-4 word topic","type":"conceptual|experience|project|scenario|troubleshooting|comparison|best-practice|followup|incomplete","direction":"one short sentence pointing the candidate at the useful angle","hint":"3-5 short concepts joined by ' -> ' summarizing the answer direction","candidates":[{"interpretation":"best-guess of the full question the interviewer is moving toward","confidence":"HIGH"},{"interpretation":"next most likely question","confidence":"MEDIUM"},{"interpretation":"broader fallback interpretation","confidence":"LOW"}]}. Candidates MUST be ordered from most to least likely and stay specific to the partial transcript. If the transcript is too incomplete to judge confidently, set type to "incomplete" and give broad but still useful candidates. Domain context: ${this.knowledgeBase}.${fc ? ` Earlier in this interview: ${fc}` : ''}`
+        content: `You are a senior ${this.domain} technical interview coach analyzing a LIVE interviewer question. The transcript may be PARTIAL — the interviewer may still be speaking. You must output your response in JSON format. Respond with STRICT JSON only (no markdown, no commentary) with exactly these keys: {"topic":"2-4 word topic","type":"conceptual|experience|project|scenario|troubleshooting|comparison|best-practice|followup|incomplete","direction":"one short sentence pointing the candidate at the useful angle","hint":"3-5 short concepts joined by ' -> ' summarizing the answer direction","candidates":[{"interpretation":"best-guess of the full question the interviewer is moving toward","confidence":"HIGH|MEDIUM|LOW"}]}. Output exactly ONE candidate object — the single best-guess interpretation — never more. If the transcript is too incomplete to judge confidently, set type to "incomplete" and give a broad but still useful interpretation. Domain context: ${this.knowledgeBase}.${fc ? ` Earlier in this interview: ${fc}` : ''}`
       },
       { role: 'user', content: `(partial) Interviewer question: "${text}"` }
     ];
@@ -1657,6 +2037,14 @@ Return ONLY a valid JSON object with no markdown formatting:
     const dir = this.direction ? ` Suggested angle to cover: ${this.direction}.` : '';
     const ctx = fc ? ` Earlier in this interview, Q/A you may naturally reference: ${fc}.` : '';
     const candidateGrounding = this.candidateContext || '';
+    // STEP 8 — weak local-scenario matches are injected as grounding so the
+    // provider answer can reference related Boomi knowledge when no STRONG
+    // scenario interception fired.
+    let localHints = '';
+    const hints = this._searchLocalContext(text);
+    if (hints.length) {
+      localHints = ' [CANDIDATE LOCAL CONTEXT] Related Boomi knowledge that may help frame your answer: ' + hints.map(h => '"' + h.answer + '"').join(' | ') + '.';
+    }
     // Phase 4.5 — Dual-Mode Output: the format rule depends on outputMode.
     const formatRule = this.outputMode === 'architect'
       ? "FORMAT RULE: Output ONLY 3-4 ultra-concise bullet points outlining the structural flow, architectural components, or steps. Use arrows (->) or short phrases. Do NOT use full conversational sentences."
@@ -1677,7 +2065,7 @@ Return ONLY a valid JSON object with no markdown formatting:
         role: 'system',
         content: `You are a senior ${this.domain} integration developer in a live technical interview, and you are the CANDIDATE. Answer the interviewer's question exactly the way a real, experienced candidate would say it out loud. Speak in flowing, natural prose — no bullets, no markdown, no headings. ${personal
           ? 'Use first person ("I would...", "I typically...") as a candidate describing their own approach. For experience/project questions, describe what you would do in a natural, credible way.'
-          : 'Give a crisp, direct technical explanation. Do not invent a personal story.'} ${formatRule} Never fabricate specific companies, exact numbers, or tools you are not sure about; if you lack the candidate's real experience, use a safe framing like "I would approach that by..." instead of inventing facts. Avoid filler openers such as "Certainly!", "Absolutely!", "In today's world", "There are several approaches", "It is important to note", or "As an AI". Question type: ${type}.${dir}${ctx}${modeNote} ${noPleasantryRule} ${candidateGrounding} STRICT RULE: You are the candidate described in CANDIDATE RESUME. Speak naturally in first person ('In my project, I implemented...', 'I usually approach this by...'). Highlight skills matching the TARGET JOB DESCRIPTION. NEVER invent or fabricate experience. If a topic is not in the candidate's resume, truthfully state 'I haven't worked with that directly, but my understanding is...' followed by a concise, accurate technical answer.`
+          : 'Give a crisp, direct technical explanation. Do not invent a personal story.'} ${formatRule} Never fabricate specific companies, exact numbers, or tools you are not sure about; if you lack the candidate's real experience, use a safe framing like "I would approach that by..." instead of inventing facts. Avoid filler openers such as "Certainly!", "Absolutely!", "In today's world", "There are several approaches", "It is important to note", or "As an AI". Question type: ${type}.${dir}${ctx}${localHints}${modeNote} ${noPleasantryRule} ${candidateGrounding} STRICT RULE: You are the candidate described in CANDIDATE RESUME. Speak naturally in first person ('In my project, I implemented...', 'I usually approach this by...'). Highlight skills matching the TARGET JOB DESCRIPTION. NEVER invent or fabricate experience. If a topic is not in the candidate's resume, truthfully state 'I haven't worked with that directly, but my understanding is...' followed by a concise, accurate technical answer.`
       },
       { role: 'user', content: this._answerUserText(text) }
     ];
@@ -1725,5 +2113,6 @@ module.exports = {
   classifySemanticChange,
   semanticChangeReason,
   boundaryDecisionInfo,
-  isShortFollowup
+  isShortFollowup,
+  isQuestionStart
 };

@@ -1,32 +1,14 @@
 require('dotenv').config();
 const { app, BrowserWindow, globalShortcut, screen, ipcMain, desktopCapturer } = require('electron');
 
-// Update 4 — Pro-Level Teleprompter v2 renders TRUE glassmorphism in the
-// renderer: the overlay-card paints `rgba(15,23,42,--bg-alpha)` + blur over
-// whatever sits behind the window, so the BrowserWindow must be fully
-// transparent. Transparent + frameless windows can paint as fully invisible on
-// Windows when hardware acceleration is enabled (especially combined with CSS
-// backdrop-filter), so it stays disabled to keep the overlay reliably visible.
+// Transparent + frameless windows can paint as fully invisible on Windows
+// when hardware acceleration is enabled (especially combined with CSS
+// backdrop-filter). Disabling it keeps the overlay reliably visible.
 app.disableHardwareAcceleration();
 
 let mainWindow;
 let clickThroughEnabled = false;
-let isPanicMode = false;
-let isCandidateMicOn = false;
-
-// Phase 4.6 + Update 2 — Instant Vanish (shared by the Alt+P hotkey and the
-// 👻 Panic button). Opacity 0 hides the overlay while audio/websockets keep
-// running; Alt+P (or a second click) restores it.
-function togglePanicMode() {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  isPanicMode = !isPanicMode;
-  mainWindow.setOpacity(isPanicMode ? 0 : 1);
-  if (isPanicMode) {
-    mainWindow.setIgnoreMouseEvents(true, { forward: true });
-  } else {
-    mainWindow.setIgnoreMouseEvents(clickThroughEnabled, { forward: true });
-  }
-}
+let isPanicMode = false; // Alt+P — native window opacity panic toggle
 
 app.on('web-contents-created', (event, contents) => {
   contents.session.setPermissionRequestHandler((webContents, permission, callback) => {
@@ -45,44 +27,25 @@ function createWindow() {
 
   mainWindow = new BrowserWindow({
     width: 700,
-    // Update — taller default startup height (640px) matching the expanded
-    // Alt+X state so the teleprompter has a big reading area from launch.
-    height: 640, // was 380
+    height: 160,
     x: Math.round((width - 700) / 2),
     y: 10,
     frame: false,
-    // Update 4 — fully transparent, frameless window so the renderer's
-    // rgba(--bg-alpha) glass card + backdrop blur composite over the desktop
-    // (no black flash behind the rounded corners).
-    transparent: true,
-    backgroundColor: '#00000000',
+    // transparent windows can fail to composite on Windows (invisible overlay);
+    // use an opaque window whose bg matches the card so the overlay always shows.
+    transparent: false,
+    backgroundColor: '#0F172A',
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: true,
-    // Update — lowered to 300 so the HUD "Minimize to mini-overlay" action
-    // (➖) can shrink the window to its 300×150 mini state via setSize().
-    minWidth: 300,
-    minHeight: 150,
+    minWidth: 400,
+    minHeight: 100,
     show: false, // avoid focus stealing on launch
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false,
-      // Update 4 — the overlay is launched with showInactive() and never gains
-      // focus (also supports click-through mode). Without this, Chromium treats
-      // the unfocused window as backgrounded and throttles renderer timers +
-      // media to ~1s granularity, which stalls the Deepgram STT feed and the
-      // streamed text rendering inside the popup. Keep the renderer fully awake.
-      backgroundThrottling: false
+      contextIsolation: false
     }
   });
-
-  // Phase 4.6 — Stealth UI & Screen-Share Protection (God Mode):
-  // natively strips the window from Zoom/Teams/OBS capture pipelines
-  mainWindow.setContentProtection(true);
-
-  // Float above all applications (including full-screen shared presentations)
-  mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
-  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
   mainWindow.loadFile('index.html');
 
@@ -103,9 +66,14 @@ function createWindow() {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
 
-  const sendHotkey = (action, payload) => {
+  const sendHotkey = (action) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('hotkey', action, payload);
+      // Restore & focus whenever a global shortcut fires: a minimized/hidden
+      // window loses focus, and the hotkey must pull it back onto the screen.
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.focus();
+      mainWindow.webContents.send('hotkey', action);
     }
   };
 
@@ -114,87 +82,76 @@ function createWindow() {
   globalShortcut.register('Alt+R', () => sendHotkey('regenerate'));
   globalShortcut.register('Alt+X', () => sendHotkey('toggle-size'));
   globalShortcut.register('Alt+Z', () => sendHotkey('toggle-clickthrough'));
+  globalShortcut.register('Alt+H', () => sendHotkey('toggle-shortcuts'));
   globalShortcut.register('Alt+M', () => sendHotkey('toggle-mode'));
+  // Alt+P — Panic Mode (Stealth Hide) using native window opacity. Deliberately
+  // NOT routed through sendHotkey(): while panic mode is active we do NOT want
+  // to restore/focus the window (it is meant to keep the app hidden), so this
+  // block handles the toggle entirely in the main process.
+  globalShortcut.register('Alt+P', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    isPanicMode = !isPanicMode;
 
-  // Phase 10 foundation — Candidate Mic Control: Alt+V toggles whether the
-  // engine listens to (and analyzes) the candidate's own microphone speech.
-  // Default OFF; Phase 10 response-analysis logic will only run when ON.
-  globalShortcut.register('Alt+V', () => {
-    isCandidateMicOn = !isCandidateMicOn;
-    sendHotkey('toggle-mic', isCandidateMicOn);
+    if (isPanicMode) {
+      // Make the entire OS window nearly invisible and ignore clicks.
+      mainWindow.setOpacity(0.03);
+      mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    } else {
+      // Restore visibility and clickability.
+      mainWindow.setOpacity(1.0);
+      mainWindow.setIgnoreMouseEvents(false);
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
   });
-
-  // Phase 10 Part 2 — Candidate Response Analysis: Alt+A grades the candidate's
-  // spoken answer against the expected answer and shows the scorecard for 8s.
-  globalShortcut.register('Alt+A', () => {
-    sendHotkey('analyze-candidate');
-  });
-
-  // Update 1 — Stealth Pro HUD: Alt+H toggles the shortcuts drawer,
-  // Alt+O toggles the settings drawer (opacity + font-size sliders).
-  globalShortcut.register('Alt+H', () => {
-    sendHotkey('toggle-shortcuts');
-  });
-  globalShortcut.register('Alt+O', () => {
-    sendHotkey('toggle-settings');
-  });
-
-  // Phase 4.6 — Panic hotkey (Instant Vanish): Alt+P toggles stealth visibility.
-  // Opacity 0 hides it visually while keeping audio/websockets running.
-  // Update 2 — the classy action-bar Panic button (👻) triggers the same
-  // action via the 'toggle-panic' IPC channel.
-  globalShortcut.register('Alt+P', togglePanicMode);
 }
 
-// Prefer an app/browser window source over a full-screen capture, because
-// WGC on Windows will often fail repeatedly when the capture target is the
-// current Electron window or an unsuitable desktop source.
+// Provide System Audio Source ID to Renderer
 ipcMain.handle('get-desktop-source', async () => {
-  const sources = await desktopCapturer.getSources({ types: ['window', 'screen'] });
-  const preferred = (sources || []).find(source => {
-    const name = String(source?.name || '').toLowerCase();
-    return !name.includes('electron') && !name.includes('boomi companion') &&
-      /(chrome|edge|brave|firefox|zoom|meet|youtube|browser|window|app)/i.test(name);
-  }) || (sources || []).find(source => !String(source?.name || '').toLowerCase().includes('electron')) || (sources || [])[0];
-  return preferred?.id || null;
+  const sources = await desktopCapturer.getSources({ types: ['screen'] });
+  return sources[0]?.id;
 });
 
-// Securely provide API key to renderer
-ipcMain.handle('get-env', () => ({ deepgram: process.env.DEEPGRAM_API_KEY, gemini: process.env.GEMINI_API_KEY, groq: process.env.GROQ_API_KEY, diagnostics: process.env.DEBUG_DIAGNOSTICS === 'true', diagnosticsPrivacy: process.env.DIAGNOSTICS_PRIVACY || 'debug' }));
-
-// Phase 2A: ask the renderer to finalize its diagnostic session before quitting
-app.on('before-quit', () => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('session-end');
-  }
-});
+// Securely provide API key to renderer. Groq/OpenRouter/Cerebras keys may be
+// comma-separated pools; the router round-robins across every key per provider.
+ipcMain.handle('get-env', () => ({
+  deepgram: process.env.DEEPGRAM_API_KEY,
+  groq: process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY || '',
+  openrouter: process.env.OpenRouter_API_KEY || process.env.OPENROUTER_API_KEYS || process.env.OPENROUTER_API_KEY || '',
+  cerebras: process.env.Cerebras_API_KEY || process.env.CEREBRAS_API_KEYS || process.env.CEREBRAS_API_KEY || ''
+}));
 
 ipcMain.on('close-app', () => {
   app.quit();
 });
 
+// ---- Window controls (top-right HUD buttons) ----
+ipcMain.on('window-minimize', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.minimize();
+});
+
+ipcMain.on('window-maximize', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMaximized()) mainWindow.unmaximize();
+  else mainWindow.maximize();
+});
+
+ipcMain.on('window-close', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.close();
+});
+
+ipcMain.on('window-split', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const { workAreaSize } = screen.getPrimaryDisplay();
+  mainWindow.setSize(Math.round(workAreaSize.width / 2), Math.round(workAreaSize.height * 0.8));
+});
+
 ipcMain.on('resize-window', (e, isExpanded) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  // Update — expanded state now matches the taller default startup height.
-  mainWindow.setSize(700, isExpanded ? 640 : 380);
-});
-
-// Update 1 — freeform resize: the renderer's drag handles send absolute size.
-ipcMain.on('resize-window-free', (e, size) => {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  const width = Math.max(400, Math.round(Number(size && size.width) || 700));
-  const height = Math.max(150, Math.round(Number(size && size.height) || 380));
-  mainWindow.setSize(width, height);
-});
-
-// Update 1 — window opacity IPC. Retained for backward compatibility /
-// external callers; the Update 4 Settings Glass Opacity slider now drives the
-// renderer's `--bg-alpha` CSS variable instead (clamped to [0.1, 1.0]).
-ipcMain.on('set-opacity', (e, opacityValue) => {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  const parsed = parseFloat(opacityValue);
-  const clamped = isNaN(parsed) ? 1.0 : Math.min(1.0, Math.max(0.1, parsed));
-  mainWindow.setOpacity(clamped);
+  mainWindow.setSize(700, isExpanded ? 400 : 160);
 });
 
 // ---- Click-through (professional rule) ----
@@ -221,46 +178,6 @@ ipcMain.on('click-through-control', (e, over) => {
   } else {
     mainWindow.setIgnoreMouseEvents(true, { forward: true });
   }
-});
-
-// Update 2 — the 👻 Panic button in the action bar (same action as Alt+P).
-ipcMain.on('toggle-panic', togglePanicMode);
-
-// ------------------------------------------------------------
-// Update — HUD Window Controls & Split Screen. Tiny emoji-style buttons in the
-// renderer's top-right control bar drive the prompter layout live during an
-// interview. Bounds are computed dynamically from the current display — never
-// hard-coded — so the prompter sits flush next to MS Teams/Zoom on any setup.
-// ------------------------------------------------------------
-
-// ➖ — Minimize to a compact mini-overlay, always floating on top.
-ipcMain.on('window-minimize', () => {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  mainWindow.setSize(300, 150);
-  mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
-});
-
-// 🗗 — Maximize to the full work area.
-ipcMain.on('window-maximize', () => {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  mainWindow.maximize();
-});
-
-// 🗖 — Snap to exactly 50% of the current display's work area on the right
-// (toggles to the left half on a second press) so the prompter sits beside
-// MS Teams/Zoom without overlapping it.
-ipcMain.on('window-split', (e, requestedSide) => {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  const display = screen.getDisplayMatching(mainWindow.getBounds());
-  const wa = display.workArea;
-  const width = Math.round(wa.width / 2);
-  const bounds = mainWindow.getBounds();
-  const onRightHalf = bounds.x >= wa.x + width;
-  let side = requestedSide;
-  if (side !== 'left' && side !== 'right') side = onRightHalf ? 'left' : 'right';
-  const x = side === 'left' ? wa.x : (wa.x + wa.width - width);
-  mainWindow.setBounds({ x, y: wa.y, width, height: wa.height });
-  mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
 });
 
 app.whenReady().then(createWindow);

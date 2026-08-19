@@ -11,7 +11,7 @@
 // ============================================================
 
 const assert = require('assert');
-const { InterviewEngine, STATES, DEFAULT_CFG, analyzeQuestion, classifyQuestionType, wordDelta, normalizeTranscript, parseJsonObject, toConfidence, classifySemanticChange, isShortFollowup, isQuestionStart } = require('../engine.js');
+const { InterviewEngine, STATES, DEFAULT_CFG, analyzeQuestion, classifyQuestionType, wordDelta, normalizeTranscript, parseJsonObject, toConfidence, classifySemanticChange, isShortFollowup, isQuestionStart, buildGlossaryRegex, matchGlossaryKeyword, matchAllGlossaryKeywords } = require('../engine.js');
 
 let passed = 0;
 let failed = 0;
@@ -119,6 +119,8 @@ function makeMockCalls() {
 const flush = () => new Promise(r => setImmediate(r));
 
 function makeEngine(timer, mocks, opts) {
+  opts = opts || {};
+  const cfg = Object.assign({ sniperMode: false }, opts.cfg || {});
   return new InterviewEngine(Object.assign({
     log: () => {},
     timeoutFn: timer.setTimeout.bind(timer),
@@ -129,7 +131,7 @@ function makeEngine(timer, mocks, opts) {
     // Phase 7 — isolate tests from the real knowledge/scenarios.json; only tests
     // that pass an explicit scenarioBank exercise the local interceptor.
     scenarioBank: []
-  }, opts || {}));
+  }, opts, { cfg }));
 }
 
 async function main() {
@@ -176,6 +178,223 @@ async function main() {
     assert.strictEqual(isQuestionStart('I used the API to send the payload.'), false, 'plain statement is not a question');
     assert.strictEqual(isQuestionStart('What is a Process Property?'), true, 'true question still detected');
     assert.strictEqual(isQuestionStart('How would you handle retries?'), true, 'true question still detected');
+  });
+
+  // ============================================================
+  console.log('\n== Keyword-Stall Glossary Scanner ==');
+  // ============================================================
+
+  const GLOSSARY = {
+    atom: 'A lightweight, dynamic runtime engine.',
+    molecule: 'A single-tenant, clustered atom.',
+    'runtime cloud': 'A multi-tenant runtime engine.'
+  };
+
+  check('buildGlossaryRegex matches every glossary term case-insensitively', () => {
+    const re = buildGlossaryRegex(GLOSSARY);
+    assert.ok(re, 'regex must be built');
+    assert.strictEqual(re.test('What is an Atom?'), true, 'atom');
+    assert.strictEqual(re.test('What is a Molecule?'), true, 'molecule');
+    assert.strictEqual(re.test('Explain runtime cloud.'), true, 'runtime cloud (multi-word)');
+    assert.strictEqual(re.test('How do I retry a failed process?'), false, 'no glossary term');
+  });
+
+  check('buildGlossaryRegex returns null for an empty glossary', () => {
+    assert.strictEqual(buildGlossaryRegex({}), null);
+    assert.strictEqual(buildGlossaryRegex(null), null);
+  });
+
+  check('buildGlossaryRegex tries multi-word terms before single-word keys', () => {
+    const re = buildGlossaryRegex({ 'runtime cloud': 'x', runtime: 'y' });
+    assert.ok(re, 'regex must be built');
+    const m = 'runtime cloud'.match(re);
+    assert.strictEqual(m[0].toLowerCase(), 'runtime cloud', 'longest term wins');
+  });
+
+  check('matchGlossaryKeyword returns term + definition for a match', () => {
+    const hit = matchGlossaryKeyword('What is an Atom...', GLOSSARY, buildGlossaryRegex(GLOSSARY));
+    assert.ok(hit, 'hit expected');
+    assert.strictEqual(hit.term, 'atom');
+    assert.strictEqual(hit.definition, 'A lightweight, dynamic runtime engine.', 'definition returned');
+  });
+
+  check('matchGlossaryKeyword returns the full multi-word term', () => {
+    const hit = matchGlossaryKeyword('Tell me about Runtime Cloud', GLOSSARY, buildGlossaryRegex(GLOSSARY));
+    assert.ok(hit, 'hit expected');
+    assert.strictEqual(hit.term, 'runtime cloud');
+  });
+
+  check('matchGlossaryKeyword returns null when nothing matches or glossary is empty', () => {
+    assert.strictEqual(matchGlossaryKeyword('What is a connector?', GLOSSARY, buildGlossaryRegex(GLOSSARY)), null);
+    assert.strictEqual(matchGlossaryKeyword('Atom', {}, null), null);
+  });
+
+  check('matchAllGlossaryKeywords returns every distinct term in a transcript (plural-safe)', () => {
+    const glossary = {
+      'environment extensions': 'Overrides per environment.',
+      'process property': 'Persisted key-value container.',
+      'cicd pipeline': 'Automates deployment.'
+    };
+    const hits = matchAllGlossaryKeywords(
+      'How do Environment Extensions and Process Properties work in a cicd pipeline?',
+      glossary,
+      buildGlossaryRegex(glossary)
+    );
+    assert.strictEqual(hits.length, 3, 'all three distinct terms matched');
+    assert.deepStrictEqual(hits.map(h => h.term).sort(), ['cicd pipeline', 'environment extensions', 'process property']);
+    assert.strictEqual(hits.find(h => h.term === 'process property').definition, 'Persisted key-value container.');
+  });
+
+  check('matchAllGlossaryKeywords maps plural matches back to their base term', () => {
+    const glossary = { atom: 'single-node runtime', molecule: 'clustered runtime' };
+    const hits = matchAllGlossaryKeywords('Atoms and molecules scale differently', glossary, buildGlossaryRegex(glossary));
+    assert.deepStrictEqual(hits.map(h => h.term).sort(), ['atom', 'molecule']);
+  });
+
+  check('matchAllGlossaryKeywords dedupes and ignores non-glossary text', () => {
+    const glossary = { atom: 'single-node runtime' };
+    const hits = matchAllGlossaryKeywords('Atoms and atoms and more atoms', glossary, buildGlossaryRegex(glossary));
+    assert.strictEqual(hits.length, 1, 'repeated term matched once');
+    assert.strictEqual(hits[0].term, 'atom');
+    assert.strictEqual(matchAllGlossaryKeywords('How do I retry a failed process?', glossary, buildGlossaryRegex(glossary)).length, 0);
+    assert.strictEqual(matchAllGlossaryKeywords('atom', {}, null).length, 0, 'empty glossary/regex -> no hits');
+  });
+
+  await checkAsync('engine emits KEYWORD_STALL on interim and once per term per turn', async () => {
+    const timer = makeTimer();
+    const mocks = makeMockCalls();
+    const stalls = [];
+    const engine = makeEngine(timer, mocks, {
+      glossary: GLOSSARY,
+      onKeywordStall: (s) => stalls.push(s)
+    });
+    engine.start();
+    engine.processTranscript('What is an Atom?', false); // interim -> stall [atom]
+    engine.processTranscript('What is an Atom and how do they scale?', false); // same term -> no re-stall
+    engine.processTranscript('And what about a Molecule?', false); // new term -> stall [molecule]
+    assert.strictEqual(stalls.length, 2, 'one multi-hit callback per new-term batch');
+    assert.strictEqual(stalls[0].length, 1, 'first batch carries one hit');
+    assert.strictEqual(stalls[0][0].term, 'atom');
+    assert.strictEqual(stalls[0][0].definition, 'A lightweight, dynamic runtime engine.');
+    assert.strictEqual(stalls[1][0].term, 'molecule');
+  });
+
+  await checkAsync('engine emits ONE multi-card batch when several terms appear in a single interim', async () => {
+    const timer = makeTimer();
+    const mocks = makeMockCalls();
+    const stalls = [];
+    const engine = makeEngine(timer, mocks, {
+      glossary: GLOSSARY,
+      onKeywordStall: (s) => stalls.push(s)
+    });
+    engine.start();
+    engine.processTranscript('Compare an Atom with a Molecule and Runtime Cloud', false);
+    assert.strictEqual(stalls.length, 1, 'single callback for the multi-term frame');
+    assert.deepStrictEqual(stalls[0].map(h => h.term), ['atom', 'molecule', 'runtime cloud']);
+  });
+
+  await checkAsync('CI/CD shorthand normalizes to the "cicd pipeline" glossary term', async () => {
+    const timer = makeTimer();
+    const mocks = makeMockCalls();
+    const stalls = [];
+    const engine = makeEngine(timer, mocks, {
+      glossary: { 'cicd pipeline': 'Automates deployment.' },
+      onKeywordStall: (s) => stalls.push(s)
+    });
+    engine.start();
+    engine.processTranscript('How do you set up a CI/CD pipeline?', false);
+    assert.strictEqual(stalls.length, 1, 'CI/CD normalized to cicd before the scan');
+    assert.strictEqual(stalls[0][0].term, 'cicd pipeline');
+  });
+
+  await checkAsync('engine does NOT emit KEYWORD_STALL on final (speech_final) frames', async () => {
+    const timer = makeTimer();
+    const mocks = makeMockCalls();
+    const stalls = [];
+    const engine = makeEngine(timer, mocks, {
+      glossary: GLOSSARY,
+      onKeywordStall: (s) => stalls.push(s)
+    });
+    engine.start();
+    engine.processTranscript('What is an Atom?', true, true); // final -> no stall
+    assert.strictEqual(stalls.length, 0, 'final frame must not stall');
+  });
+
+  await checkAsync('engine emits a fresh KEYWORD_STALL after clear()', async () => {
+    const timer = makeTimer();
+    const mocks = makeMockCalls();
+    const stalls = [];
+    const engine = makeEngine(timer, mocks, {
+      glossary: GLOSSARY,
+      onKeywordStall: (s) => stalls.push(s)
+    });
+    engine.start();
+    engine.processTranscript('What is an Atom?', false);
+    engine.clear();
+    engine.processTranscript('What is an Atom?', false);
+    assert.strictEqual(stalls.length, 2, 'clear resets the per-turn stall guard');
+  });
+
+  // ============================================================
+  // Fix A — Strict Sniper Mode: interim frames are ISOLATED (scanner only,
+  // zero API calls) and the single API request fires ONLY at a strictly
+  // finalized boundary (finalize + speech_final).
+  // ============================================================
+
+  await checkAsync('sniper mode: interim frames fire zero API calls and only the keyword scanner', async () => {
+    const timer = makeTimer();
+    const mocks = makeMockCalls();
+    const stalls = [];
+    const engine = makeEngine(timer, mocks, {
+      cfg: { sniperMode: true },
+      glossary: GLOSSARY,
+      onKeywordStall: (s) => stalls.push(s)
+    });
+    engine.start();
+    engine.processTranscript('What is an', false);                       // interim
+    engine.processTranscript('What is an Atom in Boomi?', false);        // interim
+    engine.processTranscript('What is an Atom in Boomi and how do', false); // interim
+    timer.advance(3000);
+    await flush();
+    assert.strictEqual(mocks.fastCount(), 0, 'no fast-path API from interim frames in sniper mode');
+    assert.strictEqual(mocks.answerCount(), 0, 'no answer API from interim frames in sniper mode');
+    assert.strictEqual(stalls.length, 1, 'keyword scanner still fires on interim frames');
+    assert.strictEqual(stalls[0][0].term, 'atom');
+  });
+
+  await checkAsync('sniper mode: exactly ONE answer call fires at the finalized boundary (finalize + speech_final)', async () => {
+    const timer = makeTimer();
+    const mocks = makeMockCalls();
+    const engine = makeEngine(timer, mocks, { cfg: { sniperMode: true } });
+    let finalText = '';
+    engine.onAnswer = ({ text, provisional }) => { if (!provisional) finalText = text; };
+    engine.start();
+    engine.processTranscript('How would you handle a large volume of records', false);   // interim
+    engine.processTranscript('How would you handle a large volume of records in Boomi?', true, true); // final + speechFinal
+    engine.handleSpeechBoundary('speech_final');
+    timer.advance(1000);
+    await flush();
+    while (mocks.pendingFastCount()) mocks.resolveNextFast('{"topic":"volume","type":"scenario","direction":"d","hint":"h"}');
+    while (mocks.pendingAnswerCount()) mocks.resolveNextAnswer('I would batch them into manageable chunks.');
+    await flush();
+    assert.strictEqual(mocks.answerCount(), 1, 'exactly one answer API call for one complete question');
+    assert.strictEqual(mocks.fastCount(), 0, 'no speculative fast-path call in sniper mode');
+    assert.ok(finalText.includes('I would batch them into manageable chunks.'), 'final answer delivered');
+  });
+
+  await checkAsync('sniper mode: soft boundary defers and never burns an API request', async () => {
+    const timer = makeTimer();
+    const mocks = makeMockCalls();
+    // Force a 'soft' (score >= auto but < confirm) decision deterministically.
+    const engine = makeEngine(timer, mocks, { cfg: { sniperMode: true, confirmThreshold: 999, autoAnswerThreshold: 0 } });
+    engine.start();
+    engine.processTranscript('What is a Process Property?', true, true); // final + speech_final but soft decision
+    engine.handleSpeechBoundary('speech_final');
+    timer.advance(3000);
+    await flush();
+    assert.strictEqual(mocks.answerCount(), 0, 'soft boundary defers the answer call');
+    assert.strictEqual(mocks.fastCount(), 0, 'no speculative fast-path call on a soft boundary');
+    assert.strictEqual(engine.state, STATES.WAITING_FOR_MORE, 'engine waits for more input after deferral');
   });
 
   // ============================================================
@@ -622,6 +841,30 @@ async function main() {
     assert.strictEqual(engine.state, STATES.READY);
   });
 
+  await checkAsync('emergency answer degrades to a single natural RAG summary sentence from the glossary', async () => {
+    const timer = makeTimer();
+    const mocks = makeMockCalls();
+    const glossary = {
+      'process property': 'A persisted key-value container.',
+      'environment extensions': 'Per-environment config overrides.'
+    };
+    const engine = makeEngine(timer, mocks, { openersEnabled: false, glossary });
+    engine.start();
+    engine.processTranscript('How do Process Properties work with Environment Extensions?', true);
+    timer.advance(1000);
+    await flush();
+    const inFlight = mocks.calls.answer[mocks.calls.answer.length - 1];
+    assert.ok(inFlight, 'answer request in flight');
+    inFlight.deferred.reject(new Error('Groq 500'));
+    await flush();
+    assert.ok(engine.currentAnswer.includes('I can explain the core concepts here, specifically focusing on'), 'conversational RAG summary');
+    assert.ok(engine.currentAnswer.includes('process property'), 'first matched term named');
+    assert.ok(engine.currentAnswer.includes('environment extensions'), 'second matched term named');
+    assert.ok(!engine.currentAnswer.includes('LOCAL RAG FALLBACK'), 'no formatted header');
+    assert.ok(!engine.currentAnswer.includes('•'), 'no bullet list');
+    assert.strictEqual(engine.state, STATES.ANSWER_READY, 'engine stays alive after the summary');
+  });
+
   await checkAsync('fast-path failure does not break subsequent flow', async () => {
     const timer = makeTimer();
     const mocks = makeMockCalls();
@@ -803,6 +1046,11 @@ async function main() {
   // ============================================================
 
   await checkAsync('final answer flashes a type-matched opener immediately (0ms)', async () => {
+    // Opener selection is now randomized; force Math.random to 0 so the first
+    // (canonical) opener in each type's array is always chosen — deterministic.
+    const origRandom = Math.random;
+    Math.random = () => 0;
+    try {
     const timer = makeTimer();
     const mocks = makeMockCalls();
     // draftThreshold=100 prevents the draft path from promoting, forcing the
@@ -825,6 +1073,7 @@ async function main() {
     assert.ok(finals.length === 1, 'one final answer rendered');
     assert.ok(finals[0].text.startsWith(openerProvisional.text), 'final answer prepends the opener');
     assert.ok(finals[0].text.includes('An Atom is the smallest runtime.'), 'API body preserved');
+    } finally { Math.random = origRandom; }
   });
 
   await checkAsync('type-matched openers: scenario uses scenario openers', async () => {
@@ -1301,6 +1550,11 @@ async function main() {
   });
 
   await checkAsync('local scenario match prepends the type-matched opener when enabled', async () => {
+    // Opener selection is randomized; force Math.random to 0 so the canonical
+    // conceptual opener is always picked — deterministic assertions below.
+    const origRandom = Math.random;
+    Math.random = () => 0;
+    try {
     const timer = makeTimer();
     const mocks = makeMockCalls();
     const engine = makeEngine(timer, mocks, { openersEnabled: true, scenarioBank, cfg: { draftThreshold: 999 } });
@@ -1315,9 +1569,10 @@ async function main() {
     await flush();
     assert.strictEqual(mocks.answerCount(), 0, 'no Groq call on local hit');
     assert.ok(finalText.endsWith(scenarioBank[1].answer), 'answer content is the local scenario');
-    // Update 3 — deterministic openers: conceptual always maps to the single
-    // canonical opener (no random pick).
-    assert.ok(finalText.startsWith('The simplest way to look at that is'), 'deterministic conceptual opener prepended: ' + finalText);
+    // Update — varied openers: with Math.random=0 the conceptual pool's first
+    // opener is chosen (the classic canonical line), followed by a line break.
+    assert.ok(finalText.startsWith('The simplest way to look at that is\n'), 'opener prepended with a line break: ' + JSON.stringify(finalText));
+    } finally { Math.random = origRandom; }
   });
 
   await checkAsync('draft path also intercepts local scenarios (no Groq call)', async () => {

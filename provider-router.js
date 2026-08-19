@@ -4,11 +4,11 @@
 // Boomi Companion — ProviderRouter
 //
 // Hardened multi-provider LLM router (STEP 4-6). Extracted from the
-// renderer (index.html callWithFallback / callGroq / callGemini) and made
+// renderer (index.html callWithFallback) and made
 // deterministic + unit-testable.
 //
 // Guarantees:
-//  - Providers are tried in order (Groq -> Gemini by default).
+//  - Providers are tried in order (Groq -> OpenRouter -> Cerebras by default).
 //  - Time-to-first-token budget for streaming: wait up to ttftMs for the
 //    FIRST useful chunk; once streaming starts the stream runs to
 //    completion subject to streamingTotalMs. JSON (fast/grader) calls get
@@ -43,8 +43,8 @@ const BREAKER_STATE = Object.freeze({
 });
 
 const DEFAULT_ROUTER_CFG = Object.freeze({
-  order: ['groq', 'gemini'],
-  ttftMs: 800,            // streaming: budget for the FIRST chunk only
+  order: ['groq', 'openrouter', 'cerebras'], // strict fallback chain (Gemini removed)
+  ttftMs: 4000,           // streaming: budget for the FIRST chunk only
   streamingTotalMs: 30000, // streaming: overall stream budget
   jsonTotalMs: 15000,      // non-streaming JSON (fast + grader) budget
   cooldownMs: 60000,       // full circuit-breaker cooldown window (reporting)
@@ -67,7 +67,7 @@ function classifyError(err) {
   }
   const code = extractStatus(err);
   if (code != null) {
-    if (code === 401 || code === 403) return ERROR_CLASS.AUTH;
+    if (code === 401 || code === 402 || code === 403) return ERROR_CLASS.AUTH;
     if (code === 408 || code === 425 || code === 429) return ERROR_CLASS.TRANSIENT;
     if (code >= 500 && code <= 504) return ERROR_CLASS.TRANSIENT;
     if (code === 400 || code === 404 || code === 405 || code === 406 || code === 409 || code === 415 || code === 422) return ERROR_CLASS.BAD_REQUEST;
@@ -106,33 +106,6 @@ async function readGroqStream(res, onChunk) {
   return full;
 }
 
-async function readGeminiStream(res, onChunk) {
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let full = '';
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
-    for (const line of lines) {
-      const t = line.trim();
-      if (!t.startsWith('data:')) continue;
-      const payload = t.slice(5).trim();
-      if (!payload || payload === '[DONE]') continue;
-      try {
-        const json = JSON.parse(payload);
-        const text = (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts || [])
-          .map(p => p.text || '').join('');
-        if (text) { full += text; if (onChunk) onChunk(full); }
-      } catch (_) { /* ignore malformed chunk */ }
-    }
-  }
-  return full;
-}
-
 class ProviderRouter {
   constructor(opts) {
     opts = opts || {};
@@ -145,6 +118,13 @@ class ProviderRouter {
     this._clearTimeout = typeof opts.clearTimeout === 'function' ? opts.clearTimeout : ((id) => clearTimeout(id));
     this.onEvent = typeof opts.onEvent === 'function' ? opts.onEvent : null;
 
+    // Multi-Key Pooling — round-robins across every key per provider so N
+    // accounts pool their rate-limit headroom. Sources: the provider's
+    // apiKey() closure returns a comma-separated list (openrouter/cerebras),
+    // and for groq the process.env.GROQ_API_KEYS / GROQ_API_KEY vars merge in.
+    this.groqKeys = this._splitKeys(process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY || '');
+    this._keyIndexes = {};
+
     this.providers = {};
     for (const name of this.cfg.order) {
       const p = (opts.providers && opts.providers[name]) || {};
@@ -154,8 +134,16 @@ class ProviderRouter {
         apiKey: typeof p.apiKey === 'function' ? p.apiKey : (() => String(p.apiKey || '')),
         models: Object.assign(
           name === 'groq'
-            ? { fast: 'llama-3.1-8b-instant', answer: 'llama-3.3-70b-versatile' }
-            : { fast: 'gemini-3-flash-preview', answer: 'gemini-3-flash-preview' },
+            // Stable Groq IDs — verified against GET /v1/models (Aug 2026).
+            // Legacy llama3-8b/70b-8192 are decommissioned.
+            ? { fast: 'openai/gpt-oss-20b', answer: 'openai/gpt-oss-120b' }
+            : name === 'openrouter'
+              // llama-3.1-8b-instruct is no longer free-tier on OpenRouter; the
+              // paid slug serves on pooled keys.
+              ? { fast: 'meta-llama/llama-3.1-8b-instruct', answer: 'meta-llama/llama-3.3-70b-instruct' }
+              : name === 'cerebras'
+                ? { fast: 'gemma-4-31b', answer: 'gpt-oss-120b' }
+                : { fast: 'openai/gpt-oss-20b', answer: 'openai/gpt-oss-120b' },
           p.models || {}
         ),
         breaker: BREAKER_STATE.HEALTHY,
@@ -175,6 +163,39 @@ class ProviderRouter {
 
   _key(name) {
     try { return String(this.providers[name].apiKey() || '').trim(); } catch (_) { return ''; }
+  }
+
+  // Split a possibly comma-separated key string into trimmed, non-empty keys.
+  _splitKeys(raw) {
+    return String(raw || '').split(',').map(k => k.trim()).filter(Boolean);
+  }
+
+  // Effective key pool for a provider. For 'groq' the process.env list
+  // (GROQ_API_KEYS / GROQ_API_KEY) merges in first; every provider also pools
+  // whatever its apiKey() closure returns. Deduped.
+  _keyPool(name) {
+    const merged = name === 'groq' ? this.groqKeys.slice() : [];
+    for (const k of this._splitKeys(this._key(name))) {
+      if (!merged.includes(k)) merged.push(k);
+    }
+    return merged;
+  }
+
+  // Availability probe for the missing-key skip (never rotates the pointer).
+  _hasKey(name) {
+    return this._keyPool(name).length > 0;
+  }
+
+  // Round-robin: returns the next pooled key for a provider (or '' when the
+  // pool is empty) and advances that provider's pointer so the NEXT request
+  // uses the following key.
+  _getActiveKey(name) {
+    const pool = this._keyPool(name);
+    if (pool.length === 0) return '';
+    const idx = this._keyIndexes[name] || 0;
+    const key = pool[idx % pool.length];
+    this._keyIndexes[name] = idx + 1;
+    return key;
   }
 
   getBreakerState(name) {
@@ -294,7 +315,10 @@ class ProviderRouter {
     for (const name of this.cfg.order) {
       const provider = this.providers[name];
       if (!provider || provider.enabled === false) continue;
-      if (this._key(name) === '') {
+      // Key availability is evaluated against the pooled list, so a provider
+      // with any comma-separated key is routable (round-robin picks one).
+      const hasKey = this._hasKey(name);
+      if (!hasKey) {
         attempts.push({ provider: name, skipped: 'missing_key' });
         continue;
       }
@@ -334,68 +358,60 @@ class ProviderRouter {
 
   _callProvider(name, messages, mode, onChunk, signal) {
     if (name === 'groq') return this._callGroq(messages, mode, onChunk, signal);
-    if (name === 'gemini') return this._callGemini(messages, mode, onChunk, signal);
+    if (name === 'openrouter') return this._callOpenRouter(messages, mode, onChunk, signal);
+    if (name === 'cerebras') return this._callCerebras(messages, mode, onChunk, signal);
     return Promise.reject(new Error('Unknown provider: ' + name));
   }
 
   async _callGroq(messages, mode, onChunk, signal) {
+    return this._callChatCompletions(
+      'groq',
+      'https://api.groq.com/openai/v1/chat/completions',
+      messages, mode, onChunk, signal
+    );
+  }
+
+  async _callOpenRouter(messages, mode, onChunk, signal) {
+    return this._callChatCompletions(
+      'openrouter',
+      'https://openrouter.ai/api/v1/chat/completions',
+      messages, mode, onChunk, signal
+    );
+  }
+
+  async _callCerebras(messages, mode, onChunk, signal) {
+    return this._callChatCompletions(
+      'cerebras',
+      'https://api.cerebras.ai/v1/chat/completions',
+      messages, mode, onChunk, signal
+    );
+  }
+
+  // OpenAI-compatible chat-completions call shared by Groq/OpenRouter/Cerebras.
+  // Fast (mode=true) JSON mode only requests response_format on Groq, since the
+  // free OpenRouter/Cerebras models don't all support json_object responses.
+  async _callChatCompletions(name, endpoint, messages, mode, onChunk, signal) {
     const isFast = mode === true;
-    const key = this._key('groq');
-    if (!key) throw new Error('Groq API key is missing');
-    const model = this.providers.groq.models[isFast ? 'fast' : 'answer'];
+    const key = this._getActiveKey(name);
+    if (!key) throw new Error(name + ' API key is missing');
+    const model = this.providers[name].models[isFast ? 'fast' : 'answer'];
     const body = {
       model,
       messages,
       temperature: this.cfg.temperature,
-      ...(isFast ? { response_format: { type: 'json_object' } } : {})
+      ...(isFast && name === 'groq' ? { response_format: { type: 'json_object' } } : {})
     };
     if (!isFast && onChunk) body.stream = true;
-    const res = await this._fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await this._fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
       body: JSON.stringify(body),
       signal
     });
-    if (!res.ok) throw new Error('Groq API ' + res.status + ' ' + (res.statusText || ''));
+    if (!res.ok) throw new Error(name + ' API ' + res.status + ' ' + (res.statusText || ''));
     if (!isFast && onChunk) return readGroqStream(res, onChunk);
     const data = await res.json();
     return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-  }
-
-  async _callGemini(messages, mode, onChunk, signal) {
-    const isFast = mode === true;
-    const key = this._key('gemini');
-    if (!key) throw new Error('Gemini API key is missing');
-    const model = this.providers.gemini.models[isFast ? 'fast' : 'answer'];
-    const systemText = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
-    const contents = messages.filter(m => m.role !== 'system').map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
-    }));
-    const body = {
-      contents,
-      ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
-      generationConfig: {
-        temperature: this.cfg.temperature,
-        ...(isFast ? { responseMimeType: 'application/json' } : {})
-      }
-    };
-    const endpoint = isFast
-      ? 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key)
-      : 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':streamGenerateContent?alt=sse&key=' + encodeURIComponent(key);
-    const res = await this._fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal
-    });
-    if (!res.ok) throw new Error('Gemini API ' + res.status + ' ' + (res.statusText || ''));
-    if (isFast) {
-      const data = await res.json();
-      return (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts || [])
-        .map(p => p.text || '').join('');
-    }
-    return readGeminiStream(res, onChunk);
   }
 }
 
@@ -406,6 +422,5 @@ module.exports = {
   ERROR_CLASS,
   BREAKER_STATE,
   DEFAULT_ROUTER_CFG,
-  readGroqStream,
-  readGeminiStream
+  readGroqStream
 };

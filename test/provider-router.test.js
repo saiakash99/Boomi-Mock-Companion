@@ -6,6 +6,7 @@
 //
 // Uses injected fetch + fake timers + fake clock so every routing /
 // failover / circuit-breaker / TTFT / timeout path is deterministic.
+// Fallback chain is STRICTLY groq -> openrouter -> cerebras (Gemini removed).
 // ============================================================
 
 const assert = require('assert');
@@ -119,7 +120,12 @@ function sseResponse(timer, signal, plan) {
 }
 
 function groqChunk(delta) { return { choices: [{ delta: { content: delta } }] }; }
-function geminiChunk(text) { return { candidates: [{ content: { parts: [{ text }] } }] }; }
+
+// OpenRouter/Cerebras stream in the OpenAI-compatible SSE shape, so the
+// fallback "ok" response reuses the same chunk envelope as Groq.
+function chatOk(timer, signal, text) {
+  return sseResponse(timer, signal, [{ at: 0, type: 'chunk', payload: groqChunk(text) }, { at: 1, type: 'done' }]);
+}
 
 function makeRouter(timer, fetchImpl, opts) {
   const base = {
@@ -129,16 +135,11 @@ function makeRouter(timer, fetchImpl, opts) {
     clearTimeout: timer.clearTimeout.bind(timer),
     providers: {
       groq: { apiKey: () => 'grok-key' },
-      gemini: { apiKey: () => 'gemini-key' }
+      openrouter: { apiKey: () => 'or-key' },
+      cerebras: { apiKey: () => 'cb-key' }
     }
   };
   return new ProviderRouter(Object.assign(base, opts || {}));
-}
-
-// Gemini always answers via SSE in answer (streaming) mode; in fast (JSON)
-// mode it returns a plain JSON body.
-function geminiOk(timer, signal, text) {
-  return sseResponse(timer, signal, [{ at: 0, type: 'chunk', payload: geminiChunk(text) }, { at: 1, type: 'done' }]);
 }
 
 const MSGS = [{ role: 'user', content: 'What is a Process Property in Boomi?' }];
@@ -153,8 +154,9 @@ check('classifyError maps HTTP statuses', () => {
   assert.strictEqual(classifyError(new Error('Groq API 429 Rate Limited')), ERROR_CLASS.TRANSIENT);
   assert.strictEqual(classifyError(new Error('Groq API 500 Internal')), ERROR_CLASS.TRANSIENT);
   assert.strictEqual(classifyError(new Error('Groq API 401 Unauthorized')), ERROR_CLASS.AUTH);
-  assert.strictEqual(classifyError(new Error('Gemini API 403 Forbidden')), ERROR_CLASS.AUTH);
-  assert.strictEqual(classifyError(new Error('Gemini API 400 Bad Request')), ERROR_CLASS.BAD_REQUEST);
+  assert.strictEqual(classifyError(new Error('OpenRouter API 403 Forbidden')), ERROR_CLASS.AUTH);
+  assert.strictEqual(classifyError(new Error('Cerebras API 402 Payment Required')), ERROR_CLASS.AUTH);
+  assert.strictEqual(classifyError(new Error('Cerebras API 400 Bad Request')), ERROR_CLASS.BAD_REQUEST);
   assert.strictEqual(classifyError(new Error('Groq API 502 Bad Gateway')), ERROR_CLASS.TRANSIENT);
 });
 
@@ -172,13 +174,18 @@ check('classifyError maps missing-key config errors to CONFIG', () => {
 });
 
 // ------------------------------------------------------------
-console.log('\n== Routing order & failover ==');
+console.log('\n== Routing order & failover (groq -> openrouter -> cerebras) ==');
+
+check('DEFAULT_ROUTER_CFG.order is strictly groq -> openrouter -> cerebras', () => {
+  assert.deepStrictEqual(DEFAULT_ROUTER_CFG.order, ['groq', 'openrouter', 'cerebras']);
+  assert.ok(!DEFAULT_ROUTER_CFG.order.includes('gemini'), 'Gemini must not be in the execution array');
+});
 
 await checkAsync('Groq success returns immediately (no fallback)', async () => {
   const timer = makeTimer();
   const router = makeRouter(timer, async (url) => {
     if (String(url).includes('groq.com')) return jsonResponse(200, { choices: [{ message: { content: 'ANSWER' } }] });
-    throw new Error('gemini should never be called');
+    throw new Error('openrouter should never be called');
   });
   const res = await router.request(MSGS);
   assert.strictEqual(res.provider, 'groq');
@@ -187,18 +194,18 @@ await checkAsync('Groq success returns immediately (no fallback)', async () => {
   assert.strictEqual(router.getBreakerState('groq'), BREAKER_STATE.HEALTHY);
 });
 
-await checkAsync('Groq 500 fails over to Gemini (fallback=true)', async () => {
+await checkAsync('Groq 500 fails over to OpenRouter (fallback=true)', async () => {
   const timer = makeTimer();
   const router = makeRouter(timer, (url, init) => {
     if (String(url).includes('groq.com')) return jsonResponse(500, {});
-    return geminiOk(timer, init.signal, 'GEMINI_ANSWER');
+    return chatOk(timer, init.signal, 'OPENROUTER_ANSWER');
   });
   const p = router.request(MSGS, { onChunk: () => {} });
   await settle(timer);
   const res = await p;
-  assert.strictEqual(res.provider, 'gemini');
+  assert.strictEqual(res.provider, 'openrouter');
   assert.strictEqual(res.fallback, true);
-  assert.strictEqual(res.text, 'GEMINI_ANSWER');
+  assert.strictEqual(res.text, 'OPENROUTER_ANSWER');
   assert.strictEqual(router.getBreakerState('groq'), BREAKER_STATE.COOLDOWN, 'transient 5xx puts groq in cooldown');
 });
 
@@ -207,10 +214,12 @@ await checkAsync('All providers failing rejects with attempts detail', async () 
   const router = makeRouter(timer, async () => jsonResponse(503, {}));
   await assert.rejects(router.request(MSGS), (err) => {
     assert.strictEqual(err.errorClass, ERROR_CLASS.TRANSIENT);
-    assert.strictEqual(err.providerAttempts.length, 2);
+    assert.strictEqual(err.providerAttempts.length, 3);
     assert.strictEqual(err.providerAttempts[0].provider, 'groq');
     assert.strictEqual(err.providerAttempts[0].status, 503);
-    assert.strictEqual(err.providerAttempts[1].provider, 'gemini');
+    assert.strictEqual(err.providerAttempts[1].provider, 'openrouter');
+    assert.strictEqual(err.providerAttempts[1].status, 503);
+    assert.strictEqual(err.providerAttempts[2].provider, 'cerebras');
     return true;
   });
 });
@@ -222,7 +231,7 @@ await checkAsync('429 trips RATE_LIMITED and skips until the probe window', asyn
   const timer = makeTimer();
   const router = makeRouter(timer, (url, init) => {
     if (String(url).includes('groq.com')) return jsonResponse(429, {});
-    return geminiOk(timer, init.signal, 'G');
+    return chatOk(timer, init.signal, 'G');
   });
   const p1 = router.request(MSGS, { onChunk: () => {} });
   await settle(timer);
@@ -230,12 +239,12 @@ await checkAsync('429 trips RATE_LIMITED and skips until the probe window', asyn
   assert.strictEqual(router.getBreakerState('groq'), BREAKER_STATE.RATE_LIMITED);
   assert.strictEqual(router.breakerSummary().groq.consecutiveFailures, 1);
 
-  // still inside the cooldown window -> groq is skipped, gemini serves
+  // still inside the cooldown window -> groq is skipped, openrouter serves
   timer.advance(5000);
   const p2 = router.request(MSGS, { onChunk: () => {} });
   await settle(timer);
   const res2 = await p2;
-  assert.strictEqual(res2.provider, 'gemini');
+  assert.strictEqual(res2.provider, 'openrouter');
   assert.ok(res2.attempts.some(a => a.provider === 'groq' && a.skipped === 'cooldown'), 'groq skipped while rate-limited');
 });
 
@@ -248,12 +257,12 @@ await checkAsync('half-open probe recovers a RATE_LIMITED provider to HEALTHY', 
         groqCalls++;
         return groqCalls === 1 ? jsonResponse(429, {}) : jsonResponse(200, { choices: [{ message: { content: 'BACK' } }] });
       }
-      return geminiOk(timer, init.signal, 'G');
+      return chatOk(timer, init.signal, 'G');
     },
     now: () => timer.getNow(),
     setTimeout: timer.setTimeout.bind(timer),
     clearTimeout: timer.clearTimeout.bind(timer),
-    providers: { groq: { apiKey: () => 'k' }, gemini: { apiKey: () => 'k' } }
+    providers: { groq: { apiKey: () => 'k' }, openrouter: { apiKey: () => 'k' } }
   });
   const p0 = flaky.request(MSGS, { onChunk: () => {} });
   await settle(timer);
@@ -266,7 +275,7 @@ await checkAsync('half-open probe recovers a RATE_LIMITED provider to HEALTHY', 
   const p1 = flaky.request(MSGS, { onChunk: () => {} });
   await settle(timer);
   const r1 = await p1;
-  assert.strictEqual(r1.provider, 'gemini');
+  assert.strictEqual(r1.provider, 'openrouter');
   assert.ok(r1.attempts.some(a => a.provider === 'groq' && a.skipped === 'cooldown'));
 
   timer.advance(20000); // now = 25s > probeAfter 15s -> half-open probe allowed
@@ -282,7 +291,7 @@ await checkAsync('auth/config failure marks OFFLINE and is never retried endless
   let groqCalls = 0;
   const router = makeRouter(timer, (url, init) => {
     if (String(url).includes('groq.com')) { groqCalls++; return jsonResponse(401, {}); }
-    return geminiOk(timer, init.signal, 'G');
+    return chatOk(timer, init.signal, 'G');
   });
   const p1 = router.request(MSGS, { onChunk: () => {} });
   await settle(timer);
@@ -304,18 +313,130 @@ await checkAsync('auth/config failure marks OFFLINE and is never retried endless
 await checkAsync('missing API key skips the provider without marking it OFFLINE', async () => {
   const timer = makeTimer();
   const router = new ProviderRouter({
-    fetch: (url, init) => geminiOk(timer, init.signal, 'GEM'),
+    fetch: (url, init) => chatOk(timer, init.signal, 'OR'),
     now: () => timer.getNow(),
     setTimeout: timer.setTimeout.bind(timer),
     clearTimeout: timer.clearTimeout.bind(timer),
-    providers: { groq: { apiKey: () => '' }, gemini: { apiKey: () => 'real' } }
+    providers: { groq: { apiKey: () => '' }, openrouter: { apiKey: () => 'real' } }
   });
   const p = router.request(MSGS, { onChunk: () => {} });
   await settle(timer);
   const res = await p;
-  assert.strictEqual(res.provider, 'gemini');
+  assert.strictEqual(res.provider, 'openrouter');
   assert.ok(res.attempts.some(a => a.provider === 'groq' && a.skipped === 'missing_key'));
   assert.strictEqual(router.getBreakerState('groq'), BREAKER_STATE.HEALTHY, 'no key must not mark OFFLINE');
+});
+
+// ------------------------------------------------------------
+console.log('\n== Groq Multi-Key Pooling (round-robin) ==');
+
+await checkAsync('comma-separated apiKey closure round-robins the Authorization header', async () => {
+  const timer = makeTimer();
+  const auths = [];
+  const router = makeRouter(timer, async (url, init) => {
+    if (String(url).includes('groq.com')) {
+      auths.push(init.headers.Authorization);
+      return jsonResponse(200, { choices: [{ message: { content: 'OK' } }] });
+    }
+    throw new Error('openrouter should never be called');
+  }, {
+    providers: {
+      groq: { apiKey: () => 'key-one,key-two,key-three' },
+      openrouter: { apiKey: () => 'or-key' }
+    }
+  });
+  await router.request(MSGS);
+  await router.request(MSGS);
+  await router.request(MSGS);
+  assert.deepStrictEqual(auths, ['Bearer key-one', 'Bearer key-two', 'Bearer key-three']);
+});
+
+await checkAsync('process.env.GROQ_API_KEYS pool is used and rotated per request', async () => {
+  const prev = process.env.GROQ_API_KEYS;
+  process.env.GROQ_API_KEYS = 'env-one,env-two';
+  try {
+    const timer = makeTimer();
+    const auths = [];
+    const router = makeRouter(timer, async (url, init) => {
+      if (String(url).includes('groq.com')) {
+        auths.push(init.headers.Authorization);
+        return jsonResponse(200, { choices: [{ message: { content: 'OK' } }] });
+      }
+      throw new Error('openrouter should never be called');
+    });
+    await router.request(MSGS);
+    await router.request(MSGS);
+    assert.deepStrictEqual(auths, ['Bearer env-one', 'Bearer env-two']);
+  } finally {
+    if (prev === undefined) delete process.env.GROQ_API_KEYS;
+    else process.env.GROQ_API_KEYS = prev;
+  }
+});
+
+await checkAsync('empty Groq pool still skips groq as missing_key', async () => {
+  const timer = makeTimer();
+  const router = new ProviderRouter({
+    fetch: (url, init) => jsonResponse(200, { choices: [{ message: { content: 'G' } }] }),
+    now: () => timer.getNow(),
+    setTimeout: timer.setTimeout.bind(timer),
+    clearTimeout: timer.clearTimeout.bind(timer),
+    providers: { groq: { apiKey: () => '' }, openrouter: { apiKey: () => 'real' } }
+  });
+  const res = await router.request(MSGS);
+  assert.strictEqual(res.provider, 'openrouter');
+  assert.ok(res.attempts.some(a => a.provider === 'groq' && a.skipped === 'missing_key'));
+});
+
+await checkAsync('openrouter serves after groq, and round-robins its key pool', async () => {
+  const timer = makeTimer();
+  const calls = [];
+  const router = new ProviderRouter({
+    fetch: async (url, init) => {
+      calls.push({ url: String(url), auth: init.headers.Authorization });
+      return jsonResponse(200, { choices: [{ message: { content: 'OK' } }] });
+    },
+    now: () => timer.getNow(),
+    setTimeout: timer.setTimeout.bind(timer),
+    clearTimeout: timer.clearTimeout.bind(timer),
+    providers: {
+      groq: { apiKey: () => '' },
+      openrouter: { apiKey: () => 'or-one,or-two' },
+      cerebras: { apiKey: () => 'cb-one' }
+    }
+  });
+  let res = await router.request(MSGS);
+  assert.strictEqual(res.provider, 'openrouter');
+  assert.ok(res.attempts.some(a => a.provider === 'groq' && a.skipped === 'missing_key'));
+  assert.strictEqual(calls.length, 1);
+  assert.ok(calls[0].url.includes('openrouter.ai'));
+  assert.strictEqual(calls[0].auth, 'Bearer or-one');
+
+  res = await router.request(MSGS);
+  assert.strictEqual(res.provider, 'openrouter');
+  assert.strictEqual(calls[1].auth, 'Bearer or-two', 'round-robins within the pool');
+
+  res = await router.request(MSGS);
+  assert.strictEqual(calls[2].auth, 'Bearer or-one', 'wraps back to the first key');
+});
+
+await checkAsync('cerebras serves when groq + openrouter are missing keys', async () => {
+  const timer = makeTimer();
+  const urls = [];
+  const router = new ProviderRouter({
+    fetch: async (url, init) => { urls.push(String(url)); return jsonResponse(200, { choices: [{ message: { content: 'OK' } }] }); },
+    now: () => timer.getNow(),
+    setTimeout: timer.setTimeout.bind(timer),
+    clearTimeout: timer.clearTimeout.bind(timer),
+    providers: {
+      groq: { apiKey: () => '' },
+      openrouter: { apiKey: () => '' },
+      cerebras: { apiKey: () => 'cb-one' }
+    }
+  });
+  const res = await router.request(MSGS);
+  assert.strictEqual(res.provider, 'cerebras');
+  assert.ok(urls[0].includes('api.cerebras.ai'));
+  assert.strictEqual(res.attempts.filter(a => a.skipped === 'missing_key').length, 2);
 });
 
 // ------------------------------------------------------------
@@ -329,7 +450,7 @@ await checkAsync('first chunk before TTFT clears it; stream continues under tota
       { at: 300, type: 'chunk', payload: groqChunk(' world') },
       { at: 400, type: 'done' }
     ]);
-    return geminiOk(timer, init.signal, 'G');
+    return chatOk(timer, init.signal, 'G');
   });
   const chunks = [];
   const p = router.request(MSGS, { onChunk: (t) => chunks.push(t) });
@@ -343,25 +464,26 @@ await checkAsync('first chunk before TTFT clears it; stream continues under tota
   assert.ok(chunks.length >= 2, 'stream chunks delivered after the first chunk');
 });
 
-await checkAsync('no first chunk before TTFT budget -> abort -> failover to Gemini', async () => {
+await checkAsync('no first chunk before TTFT budget -> abort -> failover to OpenRouter', async () => {
   const timer = makeTimer();
   const router = makeRouter(timer, (url, init) => {
     if (String(url).includes('groq.com')) {
-      // first chunk arrives at 1000ms — AFTER the TTFT budget
+      // first chunk arrives AFTER the TTFT budget (budget-relative so a longer
+      // ttftMs config still exercises the abort -> failover path)
       return sseResponse(timer, init.signal, [
-        { at: 1000, type: 'chunk', payload: groqChunk('late') },
-        { at: 1100, type: 'done' }
+        { at: DEFAULT_ROUTER_CFG.ttftMs + 200, type: 'chunk', payload: groqChunk('late') },
+        { at: DEFAULT_ROUTER_CFG.ttftMs + 300, type: 'done' }
       ]);
     }
-    return geminiOk(timer, init.signal, 'GEM');
+    return chatOk(timer, init.signal, 'OR');
   });
   const p = router.request(MSGS, { onChunk: () => {} });
   timer.advance(DEFAULT_ROUTER_CFG.ttftMs);  // TTFT timer fires -> abort
   await flush();
-  timer.advance(200);  // let gemini finish
+  timer.advance(200);  // let openrouter finish
   await flush();
   const res = await p;
-  assert.strictEqual(res.provider, 'gemini', 'TTFT miss fails over');
+  assert.strictEqual(res.provider, 'openrouter', 'TTFT miss fails over');
   assert.strictEqual(res.fallback, true);
   assert.strictEqual(router.getBreakerState('groq'), BREAKER_STATE.COOLDOWN);
 });
@@ -375,7 +497,7 @@ await checkAsync('stream exceeding streamingTotalMs aborts mid-stream', async ()
         { at: DEFAULT_ROUTER_CFG.streamingTotalMs + 100, type: 'chunk', payload: groqChunk('too late') }
       ]);
     }
-    return geminiOk(timer, init.signal, 'FALLBACK');
+    return chatOk(timer, init.signal, 'FALLBACK');
   });
   const p = router.request(MSGS, { onChunk: () => {} });
   timer.advance(300); await flush(); // first chunk landed -> TTFT cleared, stream continues
@@ -383,7 +505,7 @@ await checkAsync('stream exceeding streamingTotalMs aborts mid-stream', async ()
   await flush();
   timer.advance(100); await flush();
   const res = await p;
-  assert.strictEqual(res.provider, 'gemini', 'stalled stream fails over');
+  assert.strictEqual(res.provider, 'openrouter', 'stalled stream fails over');
   assert.strictEqual(res.text, 'FALLBACK');
 });
 
@@ -396,13 +518,13 @@ await checkAsync('JSON (fast/grader) call respects jsonTotalMs', async () => {
         init.signal.addEventListener('abort', () => reject(abortErr()));
       });
     }
-    return jsonResponse(200, { candidates: [{ content: { parts: [{ text: '{"topic":"x"}' }] } }] });
+    return jsonResponse(200, { choices: [{ message: { content: '{"topic":"x"}' } }] });
   });
   const p = router.request(MSGS, { mode: true });
   timer.advance(DEFAULT_ROUTER_CFG.jsonTotalMs + 100);
   await flush();
   const res = await p;
-  assert.strictEqual(res.provider, 'gemini');
+  assert.strictEqual(res.provider, 'openrouter');
   assert.strictEqual(res.text, '{"topic":"x"}');
 });
 
@@ -415,13 +537,28 @@ await checkAsync('fast JSON mode returns parsed content without streaming', asyn
     if (String(url).includes('groq.com')) {
       const body = JSON.parse(init.body);
       assert.strictEqual(body.response_format.type, 'json_object', 'fast mode forces JSON response_format');
+      assert.ok(body.model === 'openai/gpt-oss-20b', 'groq fast tier uses a stable model: ' + body.model);
       return jsonResponse(200, { choices: [{ message: { content: '{"topic":"process"}' } }] });
     }
-    throw new Error('gemini not expected');
+    throw new Error('openrouter not expected');
   });
   const res = await router.request(MSGS, { mode: true });
   assert.strictEqual(res.provider, 'groq');
   assert.strictEqual(res.text, '{"topic":"process"}');
+});
+
+await checkAsync('groq answer tier uses a stable model (fixes 404)', async () => {
+  const timer = makeTimer();
+  const seen = [];
+  const router = makeRouter(timer, async (url, init) => {
+    if (String(url).includes('groq.com')) {
+      seen.push(JSON.parse(init.body).model);
+      return jsonResponse(200, { choices: [{ message: { content: 'ANSWER' } }] });
+    }
+    throw new Error('openrouter not expected');
+  });
+  await router.request(MSGS); // answer tier (mode not true)
+  assert.deepStrictEqual(seen, ['openai/gpt-oss-120b'], 'answer tier uses openai/gpt-oss-120b');
 });
 
 await checkAsync('streaming flag only set when onChunk provided for answer mode', async () => {

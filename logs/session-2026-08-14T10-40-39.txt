@@ -1,0 +1,406 @@
+# BOOMI COMPANION — DIAGNOSTIC SESSION
+# sessionId: session_20260814_104039_438
+# started:   2026-08-14T05:10:39.321+05:30
+# domain:    Boomi
+# mode:      diagnostic
+# NOTE: transcript content is intentionally logged (developer test mode).
+# Source of truth: session-2026-08-14T10-40-39.jsonl
+      3.9 05:10:39.325 SESSION_STARTED
+      5.6 05:10:39.327 QUESTION_STATE_CHANGED questionState="LISTENING" reason="engine_start"
+    460.3 05:10:39.782 DEEPGRAM_CONNECTING
+   1389.2 05:10:40.711 DEEPGRAM_CONNECTED
+   2016.2 05:10:41.338 AUDIO_STARTED
+   2016.7 05:10:41.338 MEDIARECORDER_CREATED
+   2016.9 05:10:41.338 MEDIARECORDER_STARTED
+   2280.6 05:10:41.602 AUDIO_CHUNK_SENT
+     4375 05:10:43.697 AUDIO_CHUNK_SENT
+   6476.1 05:10:45.798 AUDIO_CHUNK_SENT
+   8576.3 05:10:47.898 AUDIO_CHUNK_SENT
+  10674.7 05:10:49.996 AUDIO_CHUNK_SENT
+  12774.3 05:10:52.096 AUDIO_CHUNK_SENT
+  14874.5 05:10:54.196 AUDIO_CHUNK_SENT
+  16974.4 05:10:56.296 AUDIO_CHUNK_SENT
+  19074.6 05:10:58.396 AUDIO_CHUNK_SENT
+    21175 05:11:00.496 AUDIO_CHUNK_SENT
+  23275.8 05:11:02.597 AUDIO_CHUNK_SENT
+  25376.4 05:11:04.698 AUDIO_CHUNK_SENT
+  27475.3 05:11:06.797 AUDIO_CHUNK_SENT
+  29574.6 05:11:08.896 AUDIO_CHUNK_SENT
+  31674.6 05:11:10.996 AUDIO_CHUNK_SENT
+  33774.9 05:11:13.096 AUDIO_CHUNK_SENT
+  35875.6 05:11:15.197 AUDIO_CHUNK_SENT
+  37916.7 05:11:17.238 AUDIO_CHUNK_SENT
+  40015.9 05:11:19.337 AUDIO_CHUNK_SENT
+  42123.4 05:11:21.445 AUDIO_CHUNK_SENT
+  44216.7 05:11:23.538 AUDIO_CHUNK_SENT
+    46316 05:11:25.637 AUDIO_CHUNK_SENT
+  48414.9 05:11:27.736 AUDIO_CHUNK_SENT
+  50575.8 05:11:29.897 AUDIO_CHUNK_SENT
+  52676.2 05:11:31.998 AUDIO_CHUNK_SENT
+  54775.5 05:11:34.097 AUDIO_CHUNK_SENT
+  56876.6 05:11:36.198 AUDIO_CHUNK_SENT
+  58975.3 05:11:38.297 AUDIO_CHUNK_SENT
+  60750.2 05:11:40.073 PERFORMANCE_MARK turnId="_global_"
+  61066.6 05:11:40.389 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Group"
+  61067.4 05:11:40.390 TRANSCRIPT_SENT_TO_UI transcript="Group"
+    61070 05:11:40.393 TRANSCRIPT_SENT_TO_ENGINE transcript="Group"
+  61076.3 05:11:40.399 AUDIO_CHUNK_SENT
+  61974.2 05:11:41.297 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Prove Gold Edition"
+  61974.4 05:11:41.297 TRANSCRIPT_SENT_TO_UI transcript="Prove Gold Edition"
+  61977.3 05:11:41.300 SEMANTIC_CHANGE questionState="LISTENING" reason="first_utterance"
+  61979.1 05:11:41.302 TURN_STARTED turnId="turn_001" questionState="LISTENING" reason="new_utterance"
+  61979.3 05:11:41.302 TRANSCRIPT_BUFFER_UPDATED turnId="turn_001" questionState="LISTENING"
+  61979.3 05:11:41.302 TRANSCRIPT_INTERIM turnId="turn_001" questionState="LISTENING" transcript="Prove Gold Edition"
+  61979.4 05:11:41.302 PERFORMANCE_MARK turnId="turn_001"
+  61979.8 05:11:41.303 QUESTION_STATE_CHANGED turnId="turn_001" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+  61981.1 05:11:41.304 DEEPGRAM_ERROR
+  62925.2 05:11:42.248 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Pro gold edition."
+  62925.5 05:11:42.248 TRANSCRIPT_SENT_TO_UI turnId="turn_001" transcript="Pro gold edition."
+  62926.3 05:11:42.249 SEMANTIC_CHANGE turnId="turn_001" questionState="SPEECH_ACTIVE" reason="content_expanded"
+  62926.7 05:11:42.249 TURN_ARCHIVED turnId="turn_002" questionState="SPEECH_ACTIVE"
+  62926.9 05:11:42.250 TURN_STARTED turnId="turn_002" questionState="SPEECH_ACTIVE" reason="new_utterance"
+    62927 05:11:42.250 TRANSCRIPT_BUFFER_UPDATED turnId="turn_002" questionState="SPEECH_ACTIVE"
+  62927.1 05:11:42.250 TRANSCRIPT_INTERIM turnId="turn_002" questionState="SPEECH_ACTIVE" transcript="Pro gold edition."
+  62927.1 05:11:42.250 PERFORMANCE_MARK turnId="turn_002"
+  62927.6 05:11:42.250 DEEPGRAM_ERROR
+  63236.9 05:11:42.560 AUDIO_CHUNK_SENT
+    64124 05:11:43.447 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Pro Gold edition."
+  64124.1 05:11:43.447 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Pro Gold edition."
+    64125 05:11:43.448 DEEPGRAM_ERROR
+  65007.6 05:11:44.330 PERFORMANCE_MARK turnId="turn_002"
+  65021.3 05:11:44.344 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Gold edition."
+  65021.4 05:11:44.344 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Gold edition."
+  65021.8 05:11:44.345 QUESTION_STATE_CHANGED turnId="turn_002" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  65022.5 05:11:44.345 DEEPGRAM_ERROR
+  65337.5 05:11:44.660 AUDIO_CHUNK_SENT
+  66829.3 05:11:46.152 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Tastic."
+  66829.4 05:11:46.152 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Tastic."
+  66829.7 05:11:46.152 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_002" transcript="Tastic."
+  67436.8 05:11:46.760 AUDIO_CHUNK_SENT
+  68025.1 05:11:47.348 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Shandar"
+  68025.2 05:11:47.348 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Shandar"
+  68025.4 05:11:47.348 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_002" transcript="Shandar"
+  68928.5 05:11:48.251 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Fantastic. Or fantastic."
+  68928.7 05:11:48.251 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Fantastic. Or fantastic."
+  68929.2 05:11:48.252 SEMANTIC_CHANGE turnId="turn_002" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+  68930.7 05:11:48.253 TURN_ARCHIVED turnId="turn_003" questionState="WAITING_FOR_MORE"
+  68931.3 05:11:48.254 TURN_STARTED turnId="turn_003" questionState="WAITING_FOR_MORE" reason="new_utterance"
+  68931.3 05:11:48.254 TRANSCRIPT_BUFFER_UPDATED turnId="turn_003" questionState="WAITING_FOR_MORE"
+  68931.4 05:11:48.254 TRANSCRIPT_INTERIM turnId="turn_003" questionState="WAITING_FOR_MORE" transcript="Fantastic. Or fantastic."
+  68931.8 05:11:48.255 PERFORMANCE_MARK turnId="turn_003"
+  68932.1 05:11:48.255 QUESTION_STATE_CHANGED turnId="turn_003" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+  68932.8 05:11:48.256 DEEPGRAM_ERROR
+    69537 05:11:48.860 AUDIO_CHUNK_SENT
+  69809.6 05:11:49.132 PERFORMANCE_MARK turnId="turn_003"
+  69827.6 05:11:49.150 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Fantastic. Fantastic."
+  69827.7 05:11:49.150 TRANSCRIPT_SENT_TO_UI turnId="turn_003" transcript="Fantastic. Fantastic."
+  69828.1 05:11:49.151 QUESTION_STATE_CHANGED turnId="turn_003" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  69828.7 05:11:49.151 DEEPGRAM_ERROR
+  70425.5 05:11:49.748 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Come"
+  70425.7 05:11:49.748 TRANSCRIPT_SENT_TO_UI turnId="turn_003" transcript="Come"
+    70426 05:11:49.749 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_003" transcript="Come"
+  71627.5 05:11:50.950 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Come on, licious."
+  71627.6 05:11:50.950 TRANSCRIPT_SENT_TO_UI turnId="turn_003" transcript="Come on, licious."
+  71628.1 05:11:50.951 SEMANTIC_CHANGE turnId="turn_003" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+  71628.3 05:11:50.951 TURN_ARCHIVED turnId="turn_004" questionState="WAITING_FOR_MORE"
+  71628.5 05:11:50.951 TURN_STARTED turnId="turn_004" questionState="WAITING_FOR_MORE" reason="new_utterance"
+  71628.5 05:11:50.951 TRANSCRIPT_BUFFER_UPDATED turnId="turn_004" questionState="WAITING_FOR_MORE"
+  71628.5 05:11:50.951 TRANSCRIPT_INTERIM turnId="turn_004" questionState="WAITING_FOR_MORE" transcript="Come on, licious."
+  71628.5 05:11:50.951 PERFORMANCE_MARK turnId="turn_004"
+  71628.7 05:11:50.951 QUESTION_STATE_CHANGED turnId="turn_004" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+    71629 05:11:50.952 DEEPGRAM_ERROR
+  71635.8 05:11:50.959 AUDIO_CHUNK_SENT
+  72540.6 05:11:51.863 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Come on, licious. Come on."
+  72540.7 05:11:51.864 TRANSCRIPT_SENT_TO_UI turnId="turn_004" transcript="Come on, licious. Come on."
+  72541.4 05:11:51.864 TRANSCRIPT_INTERIM turnId="turn_004" questionState="SPEECH_ACTIVE" transcript="Come on, licious. Come on."
+  72541.5 05:11:51.864 PERFORMANCE_MARK turnId="turn_004"
+  72541.7 05:11:51.865 QUESTION_STATE_CHANGED turnId="turn_004" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  72542.1 05:11:51.865 DEEPGRAM_ERROR
+  73428.9 05:11:52.752 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Kamalicious. Kamal or delicious?"
+    73429 05:11:52.752 TRANSCRIPT_SENT_TO_UI turnId="turn_004" transcript="Kamalicious. Kamal or delicious?"
+  73429.5 05:11:52.752 SEMANTIC_CHANGE turnId="turn_004" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+  73429.9 05:11:52.753 TURN_ARCHIVED turnId="turn_005" questionState="WAITING_FOR_MORE"
+  73430.1 05:11:52.753 TURN_STARTED turnId="turn_005" questionState="WAITING_FOR_MORE" reason="new_utterance"
+  73430.2 05:11:52.753 TRANSCRIPT_BUFFER_UPDATED turnId="turn_005" questionState="WAITING_FOR_MORE"
+  73430.2 05:11:52.753 TRANSCRIPT_INTERIM turnId="turn_005" questionState="WAITING_FOR_MORE" transcript="Kamalicious. Kamal or delicious?"
+  73430.2 05:11:52.753 PERFORMANCE_MARK turnId="turn_005"
+  73430.5 05:11:52.753 QUESTION_STATE_CHANGED turnId="turn_005" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+  73431.3 05:11:52.754 DEEPGRAM_ERROR
+  73737.8 05:11:53.061 AUDIO_CHUNK_SENT
+    74609 05:11:53.932 PERFORMANCE_MARK turnId="turn_005"
+  74627.7 05:11:53.950 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Kamalicious. Kamal or delicious?"
+  74627.8 05:11:53.951 TRANSCRIPT_SENT_TO_UI turnId="turn_005" transcript="Kamalicious. Kamal or delicious?"
+  74627.9 05:11:53.951 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_005" transcript="Kamalicious. Kamal or delicious?"
+    74929 05:11:54.252 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Yum"
+  74929.1 05:11:54.252 TRANSCRIPT_SENT_TO_UI turnId="turn_005" transcript="Yum"
+  74929.4 05:11:54.252 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_005" transcript="Yum"
+  75837.5 05:11:55.160 AUDIO_CHUNK_SENT
+  76130.9 05:11:55.453 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Yumjawab. Yum"
+  76130.9 05:11:55.454 TRANSCRIPT_SENT_TO_UI turnId="turn_005" transcript="Yumjawab. Yum"
+  76131.5 05:11:55.454 SEMANTIC_CHANGE turnId="turn_005" questionState="SPEECH_ACTIVE" reason="content_expanded"
+    76132 05:11:55.455 TURN_ARCHIVED turnId="turn_006" questionState="SPEECH_ACTIVE"
+  76132.2 05:11:55.455 TURN_STARTED turnId="turn_006" questionState="SPEECH_ACTIVE" reason="new_utterance"
+  76132.3 05:11:55.455 TRANSCRIPT_BUFFER_UPDATED turnId="turn_006" questionState="SPEECH_ACTIVE"
+  76132.3 05:11:55.455 TRANSCRIPT_INTERIM turnId="turn_006" questionState="SPEECH_ACTIVE" transcript="Yumjawab. Yum"
+  76132.3 05:11:55.455 PERFORMANCE_MARK turnId="turn_006"
+  76132.5 05:11:55.455 QUESTION_STATE_CHANGED turnId="turn_006" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  76133.4 05:11:55.456 DEEPGRAM_ERROR
+  77937.5 05:11:57.260 AUDIO_CHUNK_SENT
+  78233.7 05:11:57.556 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Yum job. Yummy or Raja. Brew good"
+  78233.9 05:11:57.557 TRANSCRIPT_SENT_TO_UI turnId="turn_006" transcript="Yum job. Yummy or Raja. Brew good"
+  78234.4 05:11:57.557 SEMANTIC_CHANGE turnId="turn_006" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+  78234.8 05:11:57.558 TRANSCRIPT_BUFFER_UPDATED turnId="turn_006" questionState="WAITING_FOR_MORE"
+  78234.9 05:11:57.558 TRANSCRIPT_INTERIM turnId="turn_006" questionState="WAITING_FOR_MORE" transcript="Yum job. Yummy or Raja. Brew good"
+    78235 05:11:57.558 PERFORMANCE_MARK turnId="turn_006"
+  78235.2 05:11:57.558 QUESTION_STATE_CHANGED turnId="turn_006" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+  78235.9 05:11:57.559 DEEPGRAM_ERROR
+  79108.3 05:11:58.431 PERFORMANCE_MARK turnId="turn_006"
+  79137.1 05:11:58.460 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Yum job. Yummy or Raja. Brew good"
+  79137.3 05:11:58.460 TRANSCRIPT_SENT_TO_UI turnId="turn_006" transcript="Yum job. Yummy or Raja. Brew good"
+  79138.1 05:11:58.461 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_006" transcript="Yum job. Yummy or Raja. Brew good"
+  79141.5 05:11:58.464 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="rich flavor."
+  79141.7 05:11:58.464 TRANSCRIPT_SENT_TO_UI turnId="turn_006" transcript="rich flavor."
+  79142.1 05:11:58.465 SEMANTIC_CHANGE turnId="turn_006" questionState="SPEECH_ACTIVE" reason="content_expanded"
+  79142.4 05:11:58.465 TURN_ARCHIVED turnId="turn_007" questionState="SPEECH_ACTIVE"
+  79142.5 05:11:58.465 TURN_STARTED turnId="turn_007" questionState="SPEECH_ACTIVE" reason="new_utterance"
+  79142.7 05:11:58.465 TRANSCRIPT_BUFFER_UPDATED turnId="turn_007" questionState="SPEECH_ACTIVE"
+  79142.7 05:11:58.465 TRANSCRIPT_INTERIM turnId="turn_007" questionState="SPEECH_ACTIVE" transcript="rich flavor."
+  79142.8 05:11:58.466 PERFORMANCE_MARK turnId="turn_007"
+  79142.8 05:11:58.466 QUESTION_STATE_CHANGED turnId="turn_007" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  79143.5 05:11:58.466 DEEPGRAM_ERROR
+  80035.4 05:11:59.358 AUDIO_CHUNK_SENT
+  80036.2 05:11:59.359 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="which flavor?"
+  80036.3 05:11:59.359 TRANSCRIPT_SENT_TO_UI turnId="turn_007" transcript="which flavor?"
+  80036.4 05:11:59.359 SEMANTIC_CHANGE turnId="turn_007" questionState="WAITING_FOR_MORE" reason="question_mark_added"
+  80036.6 05:11:59.359 TURN_ARCHIVED turnId="turn_008" questionState="WAITING_FOR_MORE"
+  80036.6 05:11:59.359 TURN_STARTED turnId="turn_008" questionState="WAITING_FOR_MORE" reason="new_utterance"
+  80036.7 05:11:59.359 TRANSCRIPT_BUFFER_UPDATED turnId="turn_008" questionState="WAITING_FOR_MORE"
+  80036.7 05:11:59.359 TRANSCRIPT_INTERIM turnId="turn_008" questionState="WAITING_FOR_MORE" transcript="which flavor?"
+  80036.7 05:11:59.359 PERFORMANCE_MARK turnId="turn_008"
+  80036.9 05:11:59.360 DEEPGRAM_ERROR
+  81209.1 05:12:00.532 PERFORMANCE_MARK turnId="turn_008"
+  81241.6 05:12:00.564 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="rich flavor. Emotions."
+  81241.7 05:12:00.564 TRANSCRIPT_SENT_TO_UI turnId="turn_008" transcript="rich flavor. Emotions."
+    81242 05:12:00.565 SEMANTIC_CHANGE turnId="turn_008" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+  81242.1 05:12:00.565 TURN_ARCHIVED turnId="turn_009" questionState="WAITING_FOR_MORE"
+  81242.1 05:12:00.565 TURN_STARTED turnId="turn_009" questionState="WAITING_FOR_MORE" reason="new_utterance"
+  81242.2 05:12:00.565 TRANSCRIPT_BUFFER_UPDATED turnId="turn_009" questionState="WAITING_FOR_MORE"
+  81242.2 05:12:00.565 TRANSCRIPT_FINAL turnId="turn_009" questionState="WAITING_FOR_MORE" transcript="rich flavor. Emotions."
+  81242.3 05:12:00.565 QUESTION_STATE_CHANGED turnId="turn_009" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+  81242.6 05:12:00.565 DEEPGRAM_ERROR
+  82120.7 05:12:01.444 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="So"
+  82120.9 05:12:01.444 TRANSCRIPT_SENT_TO_UI turnId="turn_009" transcript="So"
+    82121 05:12:01.444 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_009" transcript="So"
+    82138 05:12:01.461 AUDIO_CHUNK_SENT
+  83027.3 05:12:02.350 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="So you're still deploying your apps"
+  83027.4 05:12:02.350 TRANSCRIPT_SENT_TO_UI turnId="turn_009" transcript="So you're still deploying your apps"
+  83027.5 05:12:02.350 SEMANTIC_CHANGE turnId="turn_009" questionState="SPEECH_ACTIVE" reason="content_expanded"
+  83027.5 05:12:02.350 TURN_ARCHIVED turnId="turn_010" questionState="SPEECH_ACTIVE"
+  83027.6 05:12:02.350 TURN_STARTED turnId="turn_010" questionState="SPEECH_ACTIVE" reason="new_utterance"
+  83027.6 05:12:02.350 TRANSCRIPT_BUFFER_UPDATED turnId="turn_010" questionState="SPEECH_ACTIVE"
+  83027.7 05:12:02.350 TRANSCRIPT_INTERIM turnId="turn_010" questionState="SPEECH_ACTIVE" transcript="So you're still deploying your apps"
+  83027.7 05:12:02.350 PERFORMANCE_MARK turnId="turn_010"
+  83027.8 05:12:02.351 DEEPGRAM_ERROR
+  84233.2 05:12:03.556 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="So you're still deploying your apps without Docker in"
+  84233.3 05:12:03.556 TRANSCRIPT_SENT_TO_UI turnId="turn_010" transcript="So you're still deploying your apps without Docker in"
+  84233.6 05:12:03.556 SEMANTIC_CHANGE turnId="turn_010" questionState="SPEECH_ACTIVE" reason="content_expanded"
+  84233.6 05:12:03.556 TRANSCRIPT_BUFFER_UPDATED turnId="turn_010" questionState="SPEECH_ACTIVE"
+  84233.7 05:12:03.556 TRANSCRIPT_INTERIM turnId="turn_010" questionState="SPEECH_ACTIVE" transcript="So you're still deploying your apps without Docker in"
+  84233.7 05:12:03.556 PERFORMANCE_MARK turnId="turn_010"
+  84233.8 05:12:03.557 QUESTION_STATE_CHANGED turnId="turn_010" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+    84234 05:12:03.557 DEEPGRAM_ERROR
+  84236.7 05:12:03.559 AUDIO_CHUNK_SENT
+  85134.8 05:12:04.458 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="So you're still deploying your apps without Docker in Kubernetes?"
+  85134.9 05:12:04.458 TRANSCRIPT_SENT_TO_UI turnId="turn_010" transcript="So you're still deploying your apps without Docker in Kubernetes?"
+  85135.2 05:12:04.458 SEMANTIC_CHANGE turnId="turn_010" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+  85135.2 05:12:04.458 TRANSCRIPT_BUFFER_UPDATED turnId="turn_010" questionState="WAITING_FOR_MORE"
+  85135.3 05:12:04.458 TRANSCRIPT_INTERIM turnId="turn_010" questionState="WAITING_FOR_MORE" transcript="So you're still deploying your apps without Docker in Kubernetes?"
+  85135.4 05:12:04.458 PERFORMANCE_MARK turnId="turn_010"
+  85135.5 05:12:04.458 QUESTION_STATE_CHANGED turnId="turn_010" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+  85135.9 05:12:04.459 DEEPGRAM_ERROR
+  86008.1 05:12:05.331 PERFORMANCE_MARK turnId="turn_010"
+  86032.7 05:12:05.355 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="So you're still deploying your apps without Docker in Kubernetes?"
+  86032.7 05:12:05.356 TRANSCRIPT_SENT_TO_UI turnId="turn_010" transcript="So you're still deploying your apps without Docker in Kubernetes?"
+  86032.9 05:12:05.356 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_010" transcript="So you're still deploying your apps without Docker in Kubernetes?"
+    86038 05:12:05.361 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="That's old."
+  86038.1 05:12:05.361 TRANSCRIPT_SENT_TO_UI turnId="turn_010" transcript="That's old."
+  86038.4 05:12:05.361 SEMANTIC_CHANGE turnId="turn_010" questionState="QUESTION_BUILDING" reason="content_expanded"
+  86038.5 05:12:05.361 TURN_ARCHIVED turnId="turn_011" questionState="QUESTION_BUILDING"
+  86038.6 05:12:05.361 TURN_STARTED turnId="turn_011" questionState="QUESTION_BUILDING" reason="new_utterance"
+  86038.6 05:12:05.361 TRANSCRIPT_BUFFER_UPDATED turnId="turn_011" questionState="QUESTION_BUILDING"
+  86038.6 05:12:05.361 TRANSCRIPT_INTERIM turnId="turn_011" questionState="QUESTION_BUILDING" transcript="That's old."
+  86038.6 05:12:05.361 PERFORMANCE_MARK turnId="turn_011"
+  86038.8 05:12:05.362 QUESTION_STATE_CHANGED turnId="turn_011" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  86039.2 05:12:05.362 DEEPGRAM_ERROR
+  86335.4 05:12:05.658 AUDIO_CHUNK_SENT
+    87239 05:12:06.562 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="That's old."
+  87239.2 05:12:06.562 TRANSCRIPT_SENT_TO_UI turnId="turn_011" transcript="That's old."
+  87239.4 05:12:06.562 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_011" transcript="That's old."
+  88131.2 05:12:07.454 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="That's bold. And"
+  88131.3 05:12:07.454 TRANSCRIPT_SENT_TO_UI turnId="turn_011" transcript="That's bold. And"
+  88131.6 05:12:07.454 SEMANTIC_CHANGE turnId="turn_011" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+  88131.7 05:12:07.455 TRANSCRIPT_BUFFER_UPDATED turnId="turn_011" questionState="WAITING_FOR_MORE"
+  88131.9 05:12:07.455 TRANSCRIPT_INTERIM turnId="turn_011" questionState="WAITING_FOR_MORE" transcript="That's bold. And"
+  88131.9 05:12:07.455 PERFORMANCE_MARK turnId="turn_011"
+  88132.3 05:12:07.455 QUESTION_STATE_CHANGED turnId="turn_011" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+  88132.7 05:12:07.456 DEEPGRAM_ERROR
+  88438.1 05:12:07.761 AUDIO_CHUNK_SENT
+  89032.1 05:12:08.355 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="That's bold. And what are the"
+  89032.3 05:12:08.355 TRANSCRIPT_SENT_TO_UI turnId="turn_011" transcript="That's bold. And what are the"
+  89032.9 05:12:08.356 SEMANTIC_CHANGE turnId="turn_011" questionState="SPEECH_ACTIVE" reason="content_expanded"
+    89033 05:12:08.356 TRANSCRIPT_BUFFER_UPDATED turnId="turn_011" questionState="SPEECH_ACTIVE"
+  89033.2 05:12:08.356 TRANSCRIPT_INTERIM turnId="turn_011" questionState="SPEECH_ACTIVE" transcript="That's bold. And what are the"
+  89033.3 05:12:08.356 PERFORMANCE_MARK turnId="turn_011"
+  89033.6 05:12:08.356 QUESTION_STATE_CHANGED turnId="turn_011" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  89034.3 05:12:08.357 DEEPGRAM_ERROR
+  89343.4 05:12:08.666 PERFORMANCE_MARK turnId="turn_011"
+    89345 05:12:08.668 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="That's old. And"
+  89345.1 05:12:08.668 TRANSCRIPT_SENT_TO_UI turnId="turn_011" transcript="That's old. And"
+  89345.6 05:12:08.668 SEMANTIC_CHANGE turnId="turn_011" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+  89345.8 05:12:08.669 TRANSCRIPT_BUFFER_UPDATED turnId="turn_011" questionState="WAITING_FOR_MORE"
+  89345.8 05:12:08.669 TRANSCRIPT_FINAL turnId="turn_011" questionState="WAITING_FOR_MORE" transcript="That's old. And"
+  89346.2 05:12:08.669 QUESTION_STATE_CHANGED turnId="turn_011" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+  89346.8 05:12:08.670 DEEPGRAM_ERROR
+  89350.9 05:12:08.674 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="what are the best"
+    89351 05:12:08.674 TRANSCRIPT_SENT_TO_UI turnId="turn_011" transcript="what are the best"
+  89351.6 05:12:08.674 SEMANTIC_CHANGE turnId="turn_011" questionState="SPEECH_ACTIVE" reason="content_expanded"
+  89351.9 05:12:08.675 TURN_ARCHIVED turnId="turn_012" questionState="SPEECH_ACTIVE"
+    89352 05:12:08.675 TURN_STARTED turnId="turn_012" questionState="SPEECH_ACTIVE" reason="new_utterance"
+    89352 05:12:08.675 TRANSCRIPT_BUFFER_UPDATED turnId="turn_012" questionState="SPEECH_ACTIVE"
+  89352.1 05:12:08.675 TRANSCRIPT_INTERIM turnId="turn_012" questionState="SPEECH_ACTIVE" transcript="what are the best"
+  89352.2 05:12:08.675 PERFORMANCE_MARK turnId="turn_012"
+  89352.6 05:12:08.675 QUESTION_STATE_CHANGED turnId="turn_012" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+  89354.3 05:12:08.677 DEEPGRAM_ERROR
+  90228.6 05:12:09.551 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="what are the best practices"
+  90228.8 05:12:09.552 TRANSCRIPT_SENT_TO_UI turnId="turn_012" transcript="what are the best practices"
+  90229.4 05:12:09.552 TRANSCRIPT_INTERIM turnId="turn_012" questionState="QUESTION_BUILDING" transcript="what are the best practices"
+  90229.5 05:12:09.552 PERFORMANCE_MARK turnId="turn_012"
+  90229.9 05:12:09.553 DEEPGRAM_ERROR
+  90537.6 05:12:09.860 AUDIO_CHUNK_SENT
+  91127.8 05:12:10.451 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="what are the best practices for error handling"
+  91127.9 05:12:10.451 TRANSCRIPT_SENT_TO_UI turnId="turn_012" transcript="what are the best practices for error handling"
+  91128.3 05:12:10.451 SEMANTIC_CHANGE turnId="turn_012" questionState="QUESTION_BUILDING" reason="domain_term_added"
+  91128.3 05:12:10.451 TRANSCRIPT_BUFFER_UPDATED turnId="turn_012" questionState="QUESTION_BUILDING"
+  91128.4 05:12:10.451 TRANSCRIPT_INTERIM turnId="turn_012" questionState="QUESTION_BUILDING" transcript="what are the best practices for error handling"
+  91128.4 05:12:10.451 PERFORMANCE_MARK turnId="turn_012"
+  91128.7 05:12:10.452 DEEPGRAM_ERROR
+  92032.3 05:12:11.355 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="what are the best practices for error handling and monitoring in Dell"
+  92032.5 05:12:11.355 TRANSCRIPT_SENT_TO_UI turnId="turn_012" transcript="what are the best practices for error handling and monitoring in Dell"
+    92033 05:12:11.356 SEMANTIC_CHANGE turnId="turn_012" questionState="QUESTION_BUILDING" reason="content_expanded"
+  92033.3 05:12:11.356 TRANSCRIPT_BUFFER_UPDATED turnId="turn_012" questionState="QUESTION_BUILDING"
+  92033.4 05:12:11.356 TRANSCRIPT_INTERIM turnId="turn_012" questionState="QUESTION_BUILDING" transcript="what are the best practices for error handling and monitoring in Dell"
+  92033.5 05:12:11.356 PERFORMANCE_MARK turnId="turn_012"
+  92034.1 05:12:11.357 DEEPGRAM_ERROR
+  92638.6 05:12:11.961 AUDIO_CHUNK_SENT
+  92932.2 05:12:12.255 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="what are the best practices for error handling and monitoring in Dell Home?"
+  92932.3 05:12:12.255 TRANSCRIPT_SENT_TO_UI turnId="turn_012" transcript="what are the best practices for error handling and monitoring in Dell Home?"
+  92932.6 05:12:12.255 SEMANTIC_CHANGE turnId="turn_012" questionState="QUESTION_BUILDING" reason="question_mark_added"
+  92932.8 05:12:12.256 TRANSCRIPT_BUFFER_UPDATED turnId="turn_012" questionState="QUESTION_BUILDING"
+  92932.9 05:12:12.256 TRANSCRIPT_INTERIM turnId="turn_012" questionState="QUESTION_BUILDING" transcript="what are the best practices for error handling and monitoring in Dell Home?"
+  92932.9 05:12:12.256 PERFORMANCE_MARK turnId="turn_012"
+  92933.3 05:12:12.256 DEEPGRAM_ERROR
+  93535.1 05:12:12.858 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="what are the best practices for error handling and monitoring in Dell Home?"
+  93535.3 05:12:12.858 TRANSCRIPT_SENT_TO_UI turnId="turn_012" transcript="what are the best practices for error handling and monitoring in Dell Home?"
+  93535.5 05:12:12.858 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_012" transcript="what are the best practices for error handling and monitoring in Dell Home?"
+  93536.2 05:12:12.859 SPEECH_FINAL turnId="turn_012" questionState="QUESTION_BUILDING" transcript="what are the best practices for error handling and monitoring in Dell Home?"
+  93537.2 05:12:12.860 BOUNDARY_DECISION turnId="turn_012" questionState="QUESTION_BUILDING" decision="FINALIZE" reason="question_mark_confident" transcript="what are the best practices for error handling and monitoring in Dell Home?"
+  93538.1 61 QUESTION_SNAPSHOT_CREATED turnId="turn_012" questionState="QUESTION_COMPLETE" decision="finalize" transcript="what are the best practices for error handling and monitoring in Dell Home?"
+  93538.3 05:12:12.861 PERFORMANCE_MARK turnId="turn_012"
+  93538.4 05:12:12.861 PERFORMANCE_MARK turnId="turn_012"
+    93539 05:12:12.862 QUESTION_STATE_CHANGED turnId="turn_012" questionState="ANSWERING" reason="final_answer_started"
+  94657.5 05:12:13.980 QUESTION_STATE_CHANGED turnId="turn_012" questionState="ANSWER_READY" reason="answer_complete"
+    94658 05:12:13.981 TURN_COMPLETED turnId="turn_012" questionState="ANSWER_READY" transcript="what are the best practices for error handling and monitoring in Dell Home?"
+  94661.8 05:12:13.985 ERROR turnId="turn_012" questionState="ANSWER_READY"
+  94662.1 05:12:13.985 QUESTION_STATE_CHANGED turnId="turn_012" questionState="ERROR" reason="api_error"
+  94736.3 05:12:14.059 AUDIO_CHUNK_SENT
+    96837 05:12:16.160 AUDIO_CHUNK_SENT
+  98937.7 05:12:18.260 AUDIO_CHUNK_SENT
+ 101036.6 05:12:20.359 AUDIO_CHUNK_SENT
+   103137 05:12:22.460 AUDIO_CHUNK_SENT
+ 105236.3 05:12:24.559 AUDIO_CHUNK_SENT
+ 107336.8 05:12:26.660 AUDIO_CHUNK_SENT
+ 109436.3 05:12:28.759 AUDIO_CHUNK_SENT
+ 111537.7 05:12:30.860 AUDIO_CHUNK_SENT
+ 113636.9 05:12:32.960 AUDIO_CHUNK_SENT
+ 115736.5 05:12:35.059 AUDIO_CHUNK_SENT
+ 117837.3 05:12:37.160 AUDIO_CHUNK_SENT
+ 119937.4 05:12:39.255 AUDIO_CHUNK_SENT
+ 121742.1 05:12:41.060 QUESTION_STATE_CHANGED turnId="turn_012" questionState="ANSWERING" reason="regenerate_requested"
+ 122039.6 05:12:41.357 AUDIO_CHUNK_SENT
+ 122111.2 05:12:41.429 QUESTION_STATE_CHANGED turnId="turn_012" questionState="ANSWER_READY" reason="regenerate_complete"
+ 122114.9 05:12:41.433 ERROR turnId="turn_012" questionState="ANSWER_READY"
+ 124137.3 05:12:43.455 AUDIO_CHUNK_SENT
+ 126238.2 05:12:45.556 AUDIO_CHUNK_SENT
+ 128336.9 05:12:47.655 AUDIO_CHUNK_SENT
+ 130436.2 05:12:49.754 AUDIO_CHUNK_SENT
+   132537 05:12:51.855 AUDIO_CHUNK_SENT
+ 134636.5 05:12:53.954 AUDIO_CHUNK_SENT
+ 135210.3 05:12:54.528 PERFORMANCE_MARK turnId="turn_012"
+ 135819.9 05:12:55.138 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="How does"
+   135820 05:12:55.138 TRANSCRIPT_SENT_TO_UI turnId="turn_012" transcript="How does"
+ 135821.2 05:12:55.139 SEMANTIC_CHANGE turnId="turn_012" questionState="ANSWER_READY" reason="content_expanded"
+ 135821.4 05:12:55.139 TURN_ARCHIVED turnId="turn_013" questionState="ANSWER_READY"
+ 135821.9 05:12:55.140 TURN_STARTED turnId="turn_013" questionState="ANSWER_READY" reason="new_utterance"
+   135822 05:12:55.140 TRANSCRIPT_BUFFER_UPDATED turnId="turn_013" questionState="ANSWER_READY"
+   135822 05:12:55.140 TRANSCRIPT_INTERIM turnId="turn_013" questionState="ANSWER_READY" transcript="How does"
+ 135822.2 05:12:55.140 PERFORMANCE_MARK turnId="turn_013"
+ 135822.3 05:12:55.140 QUESTION_STATE_CHANGED turnId="turn_013" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+ 135822.8 05:12:55.141 DEEPGRAM_ERROR
+ 136727.6 05:12:56.045 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="How does DELBOOMY handle"
+ 136727.8 05:12:56.046 TRANSCRIPT_SENT_TO_UI turnId="turn_013" transcript="How does DELBOOMY handle"
+ 136728.2 05:12:56.046 SEMANTIC_CHANGE turnId="turn_013" questionState="WAITING_FOR_MORE" reason="content_expanded"
+ 136728.3 05:12:56.046 TRANSCRIPT_BUFFER_UPDATED turnId="turn_013" questionState="WAITING_FOR_MORE"
+ 136728.4 05:12:56.046 TRANSCRIPT_INTERIM turnId="turn_013" questionState="WAITING_FOR_MORE" transcript="How does DELBOOMY handle"
+ 136728.5 05:12:56.046 PERFORMANCE_MARK turnId="turn_013"
+ 136728.8 05:12:56.047 DEEPGRAM_ERROR
+ 136737.1 05:12:56.055 AUDIO_CHUNK_SENT
+ 137983.3 05:12:57.301 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="How does Dell Boomi handle error recovery?"
+ 137983.5 05:12:57.301 TRANSCRIPT_SENT_TO_UI turnId="turn_013" transcript="How does Dell Boomi handle error recovery?"
+ 137984.2 05:12:57.302 SEMANTIC_CHANGE turnId="turn_013" questionState="WAITING_FOR_MORE" reason="domain_term_added"
+ 137984.4 05:12:57.302 TRANSCRIPT_BUFFER_UPDATED turnId="turn_013" questionState="WAITING_FOR_MORE"
+ 137984.5 05:12:57.302 TRANSCRIPT_INTERIM turnId="turn_013" questionState="WAITING_FOR_MORE" transcript="How does Dell Boomi handle error recovery?"
+ 137984.5 05:12:57.302 PERFORMANCE_MARK turnId="turn_013"
+   137985 05:12:57.303 QUESTION_STATE_CHANGED turnId="turn_013" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+ 137985.4 05:12:57.303 DEEPGRAM_ERROR
+ 138829.5 05:12:58.147 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="How does Dell Boomi handle error recovery in case of a process?"
+ 138829.6 05:12:58.147 TRANSCRIPT_SENT_TO_UI turnId="turn_013" transcript="How does Dell Boomi handle error recovery in case of a process?"
+ 138830.1 05:12:58.148 SEMANTIC_CHANGE turnId="turn_013" questionState="QUESTION_BUILDING" reason="content_expanded"
+ 138830.3 05:12:58.148 TRANSCRIPT_BUFFER_UPDATED turnId="turn_013" questionState="QUESTION_BUILDING"
+ 138830.4 05:12:58.148 TRANSCRIPT_INTERIM turnId="turn_013" questionState="QUESTION_BUILDING" transcript="How does Dell Boomi handle error recovery in case of a process?"
+ 138830.4 05:12:58.148 PERFORMANCE_MARK turnId="turn_013"
+ 138830.8 05:12:58.149 DEEPGRAM_ERROR
+   138837 05:12:58.155 AUDIO_CHUNK_SENT
+ 139732.4 05:12:59.050 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="How does Dell Boomi handle error recovery in case of a process pain?"
+ 139732.6 05:12:59.050 TRANSCRIPT_SENT_TO_UI turnId="turn_013" transcript="How does Dell Boomi handle error recovery in case of a process pain?"
+   139733 05:12:59.051 SEMANTIC_CHANGE turnId="turn_013" questionState="QUESTION_BUILDING" reason="domain_term_added"
+ 139733.2 05:12:59.051 TRANSCRIPT_BUFFER_UPDATED turnId="turn_013" questionState="QUESTION_BUILDING"
+ 139733.2 05:12:59.051 TRANSCRIPT_FINAL turnId="turn_013" questionState="QUESTION_BUILDING" transcript="How does Dell Boomi handle error recovery in case of a process pain?"
+ 139733.6 05:12:59.052 DEEPGRAM_ERROR
+ 140938.7 05:13:00.257 AUDIO_CHUNK_SENT
+ 143036.7 05:13:02.355 AUDIO_CHUNK_SENT
+ 145137.3 05:13:04.455 AUDIO_CHUNK_SENT
+ 147236.7 05:13:06.555 AUDIO_CHUNK_SENT
+ 149337.6 05:13:08.655 AUDIO_CHUNK_SENT
+ 149869.5 05:13:09.187 QUESTION_STATE_CHANGED turnId="turn_013" questionState="ANSWERING" reason="regenerate_requested"
+ 150475.2 05:13:09.793 QUESTION_STATE_CHANGED turnId="turn_013" questionState="ANSWER_READY" reason="regenerate_complete"
+ 150477.2 05:13:09.795 ERROR turnId="turn_013" questionState="ANSWER_READY"
+ 151436.9 05:13:10.755 AUDIO_CHUNK_SENT
+ 153536.8 05:13:12.855 AUDIO_CHUNK_SENT
+ 155636.9 05:13:14.955 AUDIO_CHUNK_SENT
+ 157736.9 05:13:17.055 AUDIO_CHUNK_SENT
+ 159837.2 05:13:19.155 AUDIO_CHUNK_SENT
+ 161935.2 05:13:21.253 AUDIO_CHUNK_SENT
+ 164036.8 05:13:23.355 AUDIO_CHUNK_SENT
+ 166136.5 05:13:25.454 AUDIO_CHUNK_SENT
+ 168236.7 05:13:27.555 AUDIO_CHUNK_SENT
+ 170336.2 05:13:29.654 AUDIO_CHUNK_SENT
+ 172436.3 05:13:31.754 AUDIO_CHUNK_SENT
+ 174538.3 05:13:33.856 AUDIO_CHUNK_SENT
+ 176635.9 05:13:35.954 AUDIO_CHUNK_SENT
+ 178736.8 05:13:38.055 AUDIO_CHUNK_SENT
+ 180837.3 05:13:40.159 AUDIO_CHUNK_SENT
+ 182937.4 05:13:42.259 AUDIO_CHUNK_SENT
+ 185034.7 05:13:44.356 AUDIO_CHUNK_SENT
+ 187134.7 05:13:46.456 AUDIO_CHUNK_SENT
+ 188918.3 05:13:48.240 SESSION_ENDED reason="app_shutdown"
+ 188918.3 05:13:48.240 SESSION_SUMMARY

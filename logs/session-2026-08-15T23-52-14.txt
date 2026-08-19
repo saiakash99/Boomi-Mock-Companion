@@ -1,0 +1,11 @@
+# BOOMI COMPANION — DIAGNOSTIC SESSION
+# sessionId: session_20260815_235214_520
+# started:   2026-08-15T18:22:14.217+05:30
+# domain:    Boomi
+# mode:      diagnostic
+# NOTE: transcript content is intentionally logged (developer test mode).
+# Source of truth: session-2026-08-15T23-52-14.jsonl
+      3.3 18:22:14.220 SESSION_STARTED
+      4.3 18:22:14.221 QUESTION_STATE_CHANGED questionState="LISTENING" reason="engine_start"
+     93.3 18:22:14.310 DEEPGRAM_ERROR
+     99.5 18:22:14.317 AUDIO_ERROR

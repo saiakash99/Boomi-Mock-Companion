@@ -1,0 +1,34 @@
+# BOOMI COMPANION — DIAGNOSTIC SESSION
+# sessionId: session_20260816_001838_178
+# started:   2026-08-15T18:48:38.520+05:30
+# domain:    Boomi
+# mode:      diagnostic
+# NOTE: transcript content is intentionally logged (developer test mode).
+# Source of truth: session-2026-08-16T00-18-38.jsonl
+      2.9 18:48:38.523 SESSION_STARTED
+      4.1 18:48:38.524 QUESTION_STATE_CHANGED questionState="LISTENING" reason="engine_start"
+     92.7 18:48:38.613 DEEPGRAM_CONNECTING
+     99.6 18:48:38.620 AUDIO_ERROR
+   1005.1 18:48:39.525 DEEPGRAM_CONNECTED
+   3620.7 18:48:42.141 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="What is the core difference between a Boomi Atom and a molecule?"
+   3620.9 18:48:42.141 TRANSCRIPT_SENT_TO_UI transcript="What is the core difference between a Boomi Atom and a molecule?"
+   3622.6 18:48:42.143 SEMANTIC_CHANGE questionState="LISTENING" reason="first_utterance"
+     3623 18:48:42.143 TURN_STARTED turnId="turn_001" questionState="LISTENING" reason="new_utterance"
+   3623.1 18:48:42.143 TRANSCRIPT_BUFFER_UPDATED turnId="turn_001" questionState="LISTENING"
+   3623.2 18:48:42.143 TRANSCRIPT_FINAL turnId="turn_001" questionState="LISTENING" transcript="What is the core difference between a Boomi Atom and a molecule?"
+   3623.3 18:48:42.143 QUESTION_STATE_CHANGED turnId="turn_001" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+   3623.8 18:48:42.144 TIMER_STARTED turnId="turn_001" questionState="QUESTION_BUILDING"
+   3623.8 18:48:42.144 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_001" transcript="What is the core difference between a Boomi Atom and a molecule?"
+   3624.1 18:48:42.144 SPEECH_FINAL turnId="turn_001" questionState="QUESTION_BUILDING" transcript="What is the core difference between a Boomi Atom and a molecule?"
+   3624.5 18:48:42.144 TIMER_CANCELLED turnId="turn_001" questionState="QUESTION_BUILDING"
+   3624.8 18:48:42.145 BOUNDARY_DECISION turnId="turn_001" questionState="QUESTION_BUILDING" decision="FINALIZE" reason="question_mark_confident" transcript="What is the core difference between a Boomi Atom and a molecule?"
+     3625 45 QUESTION_SNAPSHOT_CREATED turnId="turn_001" questionState="QUESTION_COMPLETE" decision="finalize" transcript="What is the core difference between a Boomi Atom and a molecule?"
+   3625.2 18:48:42.145 PERFORMANCE_MARK turnId="turn_001"
+   3625.3 18:48:42.145 PERFORMANCE_MARK turnId="turn_001"
+   3645.4 18:48:42.165 QUESTION_STATE_CHANGED turnId="turn_001" questionState="ANSWERING" reason="final_answer_started"
+   3670.1 18:48:42.190 QUESTION_STATE_CHANGED turnId="turn_001" questionState="ANSWER_READY" reason="local_scenario_intercept"
+   3670.2 18:48:42.190 TURN_COMPLETED turnId="turn_001" questionState="ANSWER_READY" transcript="What is the core difference between a Boomi Atom and a molecule?"
+   3670.3 18:48:42.190 ANSWER_DELIVERED turnId="turn_001" questionState="ANSWER_READY"
+     3673 18:48:42.193 TIMER_STARTED turnId="turn_001" questionState="ANSWER_READY"
+   4391.7 18:48:42.912 PROVIDER_SUCCESS
+   4392.2 18:48:42.912 PERFORMANCE_MARK turnId="turn_001"

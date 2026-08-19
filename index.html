@@ -69,6 +69,8 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      position: relative;
+      z-index: 600; /* keeps Settings/History/close buttons above any floating indicator */
       -webkit-app-region: no-drag;
     }
 
@@ -136,7 +138,7 @@
     #question-line {
       flex: 0 0 64px;
       height: 64px;
-      font-size: clamp(13px, 1.05vw, 15px);
+      font-size: clamp(calc(13px * var(--font-scale, 1)), calc(1.05vw * var(--font-scale, 1)), calc(15px * var(--font-scale, 1)));
       line-height: 1.4;
       color: #E2E8F0;
       min-height: 18px;
@@ -160,16 +162,21 @@
       -webkit-app-region: no-drag;
     }
 
+    /* Update — Z-Index / Overlap Fix: the "⟳ preparing…" loader is moved down
+       into the question-line's right padding gutter (below the status buttons
+       AND the HUD window controls) so it never covers the Settings/History
+       buttons. The status-actions container also gets a higher z-index so the
+       header buttons always paint above any floating indicator. */
     .answer-label {
       display: none;
       /* Update — Floating Loader: the "⟳ preparing…" spinner is absolutely
          positioned so it NEVER shifts the answer-box flex layout (top-right
          of the card, above the UI, click-through safe). */
       position: absolute;
-      top: 12px;
+      top: 60px;
       right: 12px;
       z-index: 50;
-      font-size: 10px;
+      font-size: calc(10px * var(--font-scale, 1));
       color: #64748B;
       margin-bottom: 4px;
       pointer-events: none;
@@ -227,6 +234,7 @@
       margin: 0 0 0.55em 0;
       color: #94A3B8;
       opacity: 0.65;
+      white-space: pre-line; /* honor the opener's \n so the answer starts on a new line */
       transition: opacity 0.35s ease, color 0.35s ease;
     }
     .answer-content p.current {
@@ -254,14 +262,24 @@
       animation: slideIn 0.3s ease-out;
     }
     .folder-timestamp {
-      font-size: 11px;
+      font-size: calc(11px * var(--font-scale, 1));
       color: #94a3b8;
       margin-bottom: 6px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    .answer-folder-body p { margin: 0 0 0.55em 0; }
+    /* Continuous chat — the question that an answer belongs to, shown above the
+       answer body so the rolling thread reads as Q → A pairs. */
+    .folder-question {
+      font-size: calc(13px * var(--font-scale, 1));
+      color: #7DD3FC;
+      font-weight: 700;
+      margin-bottom: 8px;
+      line-height: 1.4;
+      white-space: pre-line;
+    }
+    .answer-folder-body p { margin: 0 0 0.55em 0; white-space: pre-line; }
     .answer-folder-body p:last-child { margin-bottom: 0; }
     @keyframes slideIn {
       from { opacity: 0; transform: translateY(10px); }
@@ -273,7 +291,7 @@
       flex: 0 0 auto;
       color: #38BDF8;
       font-weight: 600;
-      font-size: 12px;
+      font-size: calc(12px * var(--font-scale, 1));
       min-height: 16px;
       overflow: hidden;
       white-space: nowrap;
@@ -281,14 +299,16 @@
       -webkit-app-region: no-drag;
     }
 
-    /* TRANSCRIPT: compact strip, never dominates */
+    /* Update — Hearing strip: caps at ~2 lines (~2.4em) with a tighter
+       1.2em line-height; internal scrollbar reveals older transcript lines.
+       font-size scales globally with the A− / A+ --font-scale setting. */
     #text-box {
       flex: 0 0 auto;
-      max-height: 48px;
+      max-height: 2.4em;
       overflow-y: auto;
-      font-size: 11px;
+      font-size: calc(11px * var(--font-scale, 1));
       color: #94A3B8;
-      line-height: 1.35;
+      line-height: 1.2em;
       padding-right: 100px; /* keep the "Hearing:" line clear of the floating pill */
       mask-image: linear-gradient(to top, transparent, black 20%, black 100%);
       -webkit-mask-image: linear-gradient(to top, transparent, black 20%, black 100%);
@@ -612,14 +632,14 @@
       margin-bottom: 10px;
     }
     .history-q {
-      font-size: 11px;
+      font-size: calc(11px * var(--font-scale, 1));
       font-weight: 600;
       color: #E2E8F0;
       margin-bottom: 4px;
       overflow-wrap: break-word;
     }
     .history-a {
-      font-size: 12px;
+      font-size: calc(12px * var(--font-scale, 1));
       color: #CBD5E1;
       line-height: 1.45;
       overflow-wrap: break-word;
@@ -649,7 +669,8 @@
     <div class="window-controls" id="window-controls">
       <button id="btn-win-min" title="Minimize to mini-overlay" onclick="ipcRenderer.send('window-minimize')">➖</button>
       <button id="btn-win-split" title="Split-Screen beside Teams/Zoom (50%)" onclick="ipcRenderer.send('window-split')">🗖</button>
-      <button id="btn-win-max" title="Maximize" onclick="ipcRenderer.send('window-maximize')">🗗</button>
+      <button id="btn-win-max" title="Maximize / Restore" onclick="ipcRenderer.send('window-maximize')">🗗</button>
+      <button id="btn-win-close" title="Close" onclick="ipcRenderer.send('window-close')">✕</button>
     </div>
     <div id="question-line"><span style="color:#64748B;">Listening for the question…</span></div>
     <div class="answer-wrap">
@@ -700,8 +721,12 @@
         <div class="grid">
           <kbd>Alt+S</kbd><span>Pause / Resume</span>
           <kbd>Alt+C</kbd><span>Clear</span>
-          <kbd>Alt+V</kbd><span>Candidate Mic</span>
+          <kbd>Alt+R</kbd><span>Regenerate</span>
+          <kbd>Alt+M</kbd><span>Script / Architect</span>
           <kbd>Alt+P</kbd><span>Panic Hide</span>
+          <kbd>Alt+X</kbd><span>Expand / Collapse</span>
+          <kbd>Alt+Z</kbd><span>Click-Through</span>
+          <kbd>Alt+H</kbd><span>Shortcuts Panel</span>
         </div>
         <div class="setting-row">
           <span class="drawer-link" onclick="flipSettingsPanel()">← Back to Settings</span>
@@ -748,7 +773,8 @@
     let deepgramConnection = null;
     let keepAliveTimer = null; // Deepgram KeepAlive heartbeat (cleared on close)
     let groqKey = ''; // Uses your Groq environment key
-    let geminiKey = ''; // Phase 12 — Gemini failover key (optional)
+    let openrouterKey = ''; // OpenRouter fallback keys (comma-separated pool)
+    let cerebrasKey = ''; // Cerebras fallback keys (comma-separated pool)
     let deepgramKey = ''; // Deepgram key cached for the candidate-mic socket
     let candidateMicRunning = false; // Phase 10: physical-mic analysis active?
     let candidateMicHandle = null; // { stop } handle from startCandidateAudio
@@ -828,7 +854,7 @@
 
     // ------------------------------------------------------------
     // Provider Router (STEP 4-6) — hardened multi-provider LLM routing:
-    // Groq first, Gemini failover on transient failures, per-provider circuit
+    // Groq first, OpenRouter -> Cerebras failover on transient failures, per-provider circuit
     // breaker with probe-based recovery, TTFT + total-request timeouts on every
     // call. API keys are read lazily (loaded by connectDeepgram) so the router
     // can be constructed up-front.
@@ -837,9 +863,10 @@
       fetch,
       providers: {
         groq: { apiKey: () => groqKey },
-        gemini: { apiKey: () => geminiKey }
+        openrouter: { apiKey: () => openrouterKey },
+        cerebras: { apiKey: () => cerebrasKey }
       },
-      order: ['groq', 'gemini'],
+      order: ['groq', 'openrouter', 'cerebras'], // strict fallback chain
       now: Date.now,
       setTimeout: (fn, ms) => window.setTimeout(fn, ms),
       clearTimeout: (id) => window.clearTimeout(id),
@@ -954,14 +981,9 @@
       historyEntries.push({ q: last.q || '', a: last.a, turnId: last.turnId, at: Date.now() });
       lastArchivedTurnId = engine.turnId;
       renderHistory();
-      clearMainAnswer();
-    }
-
-    function clearMainAnswer() {
-      answerContent.innerHTML = '<span class="answer-placeholder" style="color:#64748B;">Listening for the question…</span>';
-      answerBox.style.borderLeft = '';
-      answerBox.classList.remove('dimmed');
-      midStream = false;
+      // Continuous chat — the previous Q+A stays visible in the main answer
+      // area; only the slide-out drawer is updated. The next answer is appended
+      // to the bottom of the thread instead of wiping this one.
     }
 
     function renderHistory() {
@@ -1011,6 +1033,8 @@
       if (isNewCommit) {
         // Update 5 — additive "folder" UI: a newly committed answer gets its
         // own stacked card below any earlier answers instead of wiping them.
+        // Continuous chat — the prior Q&A stays on screen and the new turn's
+        // question + answer append to the bottom of the thread.
         const placeholder = answerContent.querySelector('.answer-placeholder');
         if (placeholder) placeholder.remove();
         folder = document.createElement('div');
@@ -1021,6 +1045,17 @@
         const d = new Date();
         header.innerText = 'Update • ' + d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
         folder.appendChild(header);
+
+        // Continuous chat — append the question this answer belongs to so the
+        // rolling thread always reads as Q → A pairs at the bottom.
+        const qText = (engine.questionBuffer || '').trim() ||
+          (engine.contextHistory.length ? engine.contextHistory[engine.contextHistory.length - 1].q : '');
+        if (qText) {
+          const q = document.createElement('div');
+          q.className = 'folder-question';
+          q.innerHTML = 'Q: ' + escapeHtml(qText);
+          folder.appendChild(q);
+        }
 
         const body = document.createElement('div');
         body.className = 'answer-folder-body';
@@ -1043,7 +1078,9 @@
       if (forceTop) {
         if (typeof scrollArea.scrollTo === 'function') scrollArea.scrollTo({ top: 0, behavior: 'auto' });
         else scrollArea.scrollTop = 0;
-      } else if (autoFollow) {
+      } else if (autoFollow || isNewCommit) {
+        // Continuous chat — after appending a new Q/A, pin the thread to the
+        // bottom so the newest answer is always visible hands-free.
         if (typeof scrollArea.scrollTo === 'function') scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior: 'smooth' });
         else scrollArea.scrollTop = scrollArea.scrollHeight;
       }
@@ -1088,11 +1125,11 @@
       // STEP 10 — auto-scroll reset: a brand-new final answer re-engages
       // bottom-pinning even if the candidate had scrolled up to re-read.
       // Update 4 — hysteresis: also drop the Follow affordance.
-      // Finalize — snap to the top on a final answer instead of dragging the
-      // reader to the bottom; the streaming interim paints still follow.
-      autoFollow = false;
+      // Continuous chat — a new final answer appends below the rolling thread
+      // and pins it to the bottom so the newest Q+A is always in view.
+      autoFollow = true;
       followBtn.classList.remove('show');
-      paintAnswer(answer, true, isNewCommit);
+      paintAnswer(answer, false, isNewCommit);
     }
 
     // Update 4 — Hysteresis Scroll: a manual scroll up of >48px pauses
@@ -1197,7 +1234,8 @@
         const env = await ipcRenderer.invoke('get-env');
         const apiKey = env.deepgram;
         groqKey = env.groq;
-        geminiKey = env.gemini; // Phase 12 — Gemini failover key (may be empty)
+        openrouterKey = env.openrouter; // OpenRouter pool (comma-separated)
+        cerebrasKey = env.cerebras; // Cerebras pool (comma-separated)
         deepgramKey = apiKey; // cached for the candidate-mic WebSocket
 
         if (env.diagnostics !== undefined) diagState.enabled = !!env.diagnostics;
@@ -1465,10 +1503,10 @@
     // lightweight `llama-3.1-8b-instant` for cheap, low-latency classification;
     // the answer tier (mode !== true) uses the full `llama-3.3-70b-versatile`.
     // STEP 4-6 — Every LLM path (fast JSON, streaming answer, candidate grader)
-    // goes through the ProviderRouter: Groq -> Gemini failover, TTFT + total
-    // timeouts, per-provider circuit breaker with probe recovery. The router
-    // owns model selection, error classification, and breaker state — this
-    // wrapper just adapts the engine's call signatures to the router and
+    // goes through the ProviderRouter: Groq -> OpenRouter -> Cerebras failover,
+    // TTFT + total timeouts, per-provider circuit breaker with probe recovery.
+    // The router owns model selection, error classification, and breaker state —
+    // this wrapper just adapts the engine's call signatures to the router and
     // surfaces fallback events to diagnostics.
     async function callWithFallback(messages, mode, onChunk) {
       const result = await providerRouter.request(messages, {
@@ -1561,6 +1599,17 @@
       opacityValue.innerText = val + '%';
       document.documentElement.style.setProperty('--bg-alpha', (val / 100).toFixed(2));
     });
+
+    // Startup sync: read the live --bg-alpha (0.30–1.00) so the slider and the
+    // % label always match the CSS default, even if :root changes later.
+    (function syncOpacityFromCss() {
+      const parsed = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bg-alpha'));
+      if (Number.isFinite(parsed) && parsed > 0) {
+        const pct = Math.round(parsed * 100);
+        opacitySlider.value = String(pct);
+        opacityValue.innerText = pct + '%';
+      }
+    })();
 
     // Update 4 — Font Size A− / A+ buttons adjust the clamp base via --font-scale.
     let fontScale = 1;
@@ -1656,7 +1705,8 @@
       } else if (action === 'toggle-size') {
         isExpanded = !isExpanded;
         ipcRenderer.send('resize-window', isExpanded);
-        textBox.style.maxHeight = isExpanded ? '130px' : '48px';
+        // collapsed falls back to the CSS 2.4em (~2 lines) cap; expanded shows ~8 lines
+        textBox.style.maxHeight = isExpanded ? '8em' : '';
       } else if (action === 'toggle-clickthrough') {
         setClickThrough(!clickThrough);
       } else if (action === 'toggle-mode') {

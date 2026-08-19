@@ -4,6 +4,4 @@ node_modules/
 dist/
 build/
 *.log
-logs/
-*.jsonl
 .DS_Store

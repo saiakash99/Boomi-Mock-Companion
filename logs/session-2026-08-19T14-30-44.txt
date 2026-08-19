@@ -1,0 +1,150 @@
+# BOOMI COMPANION — DIAGNOSTIC SESSION
+# sessionId: session_20260819_143044_501
+# started:   2026-08-19T09:00:44.595+05:30
+# domain:    Boomi
+# mode:      diagnostic
+# NOTE: transcript content is intentionally logged (developer test mode).
+# Source of truth: session-2026-08-19T14-30-44.jsonl
+      9.7 09:00:44.605 SESSION_STARTED
+     10.5 09:00:44.606 QUESTION_STATE_CHANGED questionState="LISTENING" reason="engine_start"
+     72.3 09:00:44.668 DEEPGRAM_CONNECTING
+    976.3 09:00:45.572 DEEPGRAM_CONNECTED
+   1026.8 09:00:45.622 AUDIO_STARTED
+   1028.7 09:00:45.624 MEDIARECORDER_CREATED
+   1031.1 09:00:45.627 MEDIARECORDER_STARTED
+   1344.5 09:00:45.940 AUDIO_CHUNK_SENT
+   1669.5 09:00:46.265 PAUSE questionState="LISTENING"
+   1670.6 09:00:46.266 QUESTION_STATE_CHANGED questionState="PAUSED" reason="user_pause"
+   1754.6 09:00:46.350 PERFORMANCE_MARK turnId="_global_"
+  38411.7 09:01:23.007 RESUME questionState="PAUSED"
+  38412.2 09:01:23.008 QUESTION_STATE_CHANGED questionState="LISTENING" reason="user_resume"
+  38532.9 09:01:23.128 AUDIO_CHUNK_SENT
+  39112.8 09:01:23.708 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you"
+    39113 09:01:23.709 TRANSCRIPT_SENT_TO_UI transcript="Can you"
+    39115 09:01:23.710 SEMANTIC_CHANGE questionState="LISTENING" reason="first_utterance"
+  39115.4 09:01:23.711 TURN_STARTED turnId="turn_001" questionState="LISTENING" reason="new_utterance"
+  39115.4 09:01:23.711 TRANSCRIPT_BUFFER_UPDATED turnId="turn_001" questionState="LISTENING"
+  39115.5 09:01:23.711 TRANSCRIPT_FINAL turnId="turn_001" questionState="LISTENING" transcript="Can you"
+    39116 09:01:23.711 QUESTION_STATE_CHANGED turnId="turn_001" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  39116.2 09:01:23.712 TIMER_STARTED turnId="turn_001" questionState="WAITING_FOR_MORE"
+  39116.2 09:01:23.712 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_001" transcript="Can you"
+  39116.4 09:01:23.712 SPEECH_FINAL turnId="turn_001" questionState="WAITING_FOR_MORE" transcript="Can you"
+  39116.7 09:01:23.712 TIMER_CANCELLED turnId="turn_001" questionState="WAITING_FOR_MORE"
+  39116.8 09:01:23.712 BOUNDARY_DECISION turnId="turn_001" questionState="WAITING_FOR_MORE" decision="WAIT_FOR_MORE" reason="too_few_words" transcript="Can you"
+  40632.7 09:01:25.228 AUDIO_CHUNK_SENT
+  42733.4 09:01:27.329 AUDIO_CHUNK_SENT
+  44833.5 09:01:29.429 AUDIO_CHUNK_SENT
+  45721.5 09:01:30.317 CLEAR turnId="turn_001" questionState="WAITING_FOR_MORE"
+  45721.8 09:01:30.317 QUESTION_STATE_CHANGED turnId="turn_001" questionState="LISTENING" reason="user_clear"
+  46933.4 09:01:31.529 AUDIO_CHUNK_SENT
+  47784.9 09:01:32.380 PERFORMANCE_MARK turnId="turn_001"
+  48101.5 09:01:32.697 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you"
+  48101.7 09:01:32.697 TRANSCRIPT_SENT_TO_UI turnId="turn_001" transcript="Can you"
+  48102.7 09:01:32.698 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_001" transcript="Can you"
+  49003.3 09:01:33.599 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life"
+  49003.4 09:01:33.599 TRANSCRIPT_SENT_TO_UI turnId="turn_001" transcript="Can you walk me through the life"
+  49003.5 09:01:33.599 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_001" transcript="Can you walk me through the life"
+  49033.2 09:01:33.629 AUDIO_CHUNK_SENT
+  49910.2 09:01:34.506 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle of a"
+  49910.3 09:01:34.506 TRANSCRIPT_SENT_TO_UI turnId="turn_001" transcript="Can you walk me through the life cycle of a"
+  49910.4 09:01:34.506 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_001" transcript="Can you walk me through the life cycle of a"
+  51107.6 09:01:35.703 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  51107.7 09:01:35.703 TRANSCRIPT_SENT_TO_UI turnId="turn_001" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  51107.8 09:01:35.703 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_001" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  51133.4 09:01:35.729 AUDIO_CHUNK_SENT
+  52602.6 09:01:37.198 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  52602.7 09:01:37.198 TRANSCRIPT_SENT_TO_UI turnId="turn_001" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  52602.8 09:01:37.198 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_001" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+    53234 09:01:37.830 AUDIO_CHUNK_SENT
+    53511 09:01:38.106 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle of a standard Boomi process?"
+    53511 09:01:38.107 TRANSCRIPT_SENT_TO_UI turnId="turn_001" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  53511.1 09:01:38.107 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_001" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  54402.6 09:01:38.998 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  54402.6 09:01:38.998 TRANSCRIPT_SENT_TO_UI turnId="turn_001" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  54402.8 09:01:38.998 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_001" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  55334.4 09:01:39.930 AUDIO_CHUNK_SENT
+  55603.9 09:01:40.199 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle of a standard Boomi process?"
+    55604 09:01:40.200 TRANSCRIPT_SENT_TO_UI turnId="turn_001" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+    55604 09:01:40.200 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_001" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  56507.7 09:01:41.103 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  56507.8 09:01:41.103 TRANSCRIPT_SENT_TO_UI turnId="turn_001" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  56509.1 09:01:41.105 SEMANTIC_CHANGE turnId="turn_001" questionState="LISTENING" reason="first_utterance"
+  56509.3 09:01:41.105 TURN_ARCHIVED turnId="turn_002" questionState="LISTENING"
+    56510 09:01:41.105 TURN_STARTED turnId="turn_002" questionState="LISTENING" reason="new_utterance"
+    56510 09:01:41.105 TRANSCRIPT_BUFFER_UPDATED turnId="turn_002" questionState="LISTENING"
+    56510 09:01:41.106 TRANSCRIPT_FINAL turnId="turn_002" questionState="LISTENING" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  56510.2 09:01:41.106 QUESTION_STATE_CHANGED turnId="turn_002" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+  56510.7 09:01:41.106 TIMER_STARTED turnId="turn_002" questionState="QUESTION_BUILDING"
+  56510.7 09:01:41.106 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_002" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  56910.4 09:01:41.506 PAUSE_STARTED turnId="turn_002" questionState="QUESTION_BUILDING"
+  56910.6 09:01:41.506 QUESTION_STATE_CHANGED turnId="turn_002" questionState="PAUSE_DETECTED" reason="pause_possible"
+    56911 09:01:41.506 TIMER_CANCELLED turnId="turn_002" questionState="PAUSE_DETECTED"
+    56911 09:01:41.507 TIMER_STARTED turnId="turn_002" questionState="PAUSE_DETECTED"
+  57219.6 09:01:41.815 PAUSE_UPDATED turnId="turn_002" questionState="PAUSE_DETECTED"
+    57220 09:01:41.816 BOUNDARY_CANDIDATE turnId="turn_002" questionState="PAUSE_DETECTED" reason="pause_threshold_reached" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  57220.1 09:01:41.816 PERFORMANCE_MARK turnId="turn_002"
+  57220.4 09:01:41.816 QUESTION_STATE_CHANGED turnId="turn_002" questionState="QUESTION_BOUNDARY_LIKELY" reason="pause_threshold_700ms"
+  57220.7 09:01:41.816 TIMER_CANCELLED turnId="turn_002" questionState="QUESTION_BOUNDARY_LIKELY"
+  57220.9 09:01:41.816 TIMER_STARTED turnId="turn_002" questionState="QUESTION_BOUNDARY_LIKELY"
+  57312.1 09:01:41.908 TIMER_CANCELLED turnId="turn_002" questionState="QUESTION_BOUNDARY_LIKELY"
+  57312.7 09:01:41.908 BOUNDARY_DECISION turnId="turn_002" questionState="QUESTION_BOUNDARY_LIKELY" decision="FINALIZE" reason="question_mark_confident" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  57313.2 09 QUESTION_SNAPSHOT_CREATED turnId="turn_002" questionState="QUESTION_COMPLETE" decision="finalize" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  57313.4 09:01:41.909 PERFORMANCE_MARK turnId="turn_002"
+  57313.4 09:01:41.909 PERFORMANCE_MARK turnId="turn_002"
+  57370.2 09:01:41.966 QUESTION_STATE_CHANGED turnId="turn_002" questionState="ANSWERING" reason="final_answer_started"
+  57393.9 09:01:41.989 AUDIO_CHUNK_SENT
+  58184.2 09:01:42.780 PROVIDER_FAILURE
+  58184.4 09:01:42.780 PROVIDER_COOLDOWN reason="transient"
+  58996.8 09:01:43.592 PROVIDER_FAILURE
+    58997 09:01:43.592 PROVIDER_COOLDOWN reason="transient"
+  59291.5 09:01:43.887 PROVIDER_FAILURE
+  59291.6 09:01:43.887 PROVIDER_OFFLINE reason="AUTH"
+  59292.2 09:01:43.888 ERROR turnId="turn_002" questionState="ANSWERING"
+  59311.6 09:01:43.907 EMERGENCY_RAG_DUMP turnId="turn_002" questionState="ANSWERING" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  59312.2 09:01:43.908 QUESTION_STATE_CHANGED turnId="turn_002" questionState="ANSWER_READY" reason="emergency_response"
+  59312.6 09:01:43.908 TURN_COMPLETED turnId="turn_002" questionState="ANSWER_READY" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  59312.7 09:01:43.908 ANSWER_DELIVERED turnId="turn_002" questionState="ANSWER_READY"
+  59322.5 09:01:43.918 TIMER_STARTED turnId="turn_002" questionState="ANSWER_READY"
+  59473.2 09:01:44.069 AUDIO_CHUNK_SENT
+  61574.2 09:01:46.167 AUDIO_CHUNK_SENT
+  63673.4 09:01:48.267 AUDIO_CHUNK_SENT
+  65774.1 09:01:50.367 AUDIO_CHUNK_SENT
+  67873.3 09:01:52.467 AUDIO_CHUNK_SENT
+  69973.6 09:01:54.567 AUDIO_CHUNK_SENT
+  72074.4 09:01:56.668 AUDIO_CHUNK_SENT
+  74123.9 09:01:58.717 PERFORMANCE_MARK turnId="turn_002"
+  74174.6 09:01:58.768 AUDIO_CHUNK_SENT
+  74328.3 09:01:58.922 QUESTION_STATE_CHANGED turnId="turn_002" questionState="LISTENING"
+  74436.1 09:01:59.029 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk"
+  74436.2 09:01:59.029 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Can you walk"
+  74436.3 09:01:59.030 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_002" transcript="Can you walk"
+  75644.4 09:02:00.238 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle"
+  75644.5 09:02:00.238 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Can you walk me through the life cycle"
+  75644.6 09:02:00.238 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_002" transcript="Can you walk me through the life cycle"
+  76275.6 09:02:00.869 AUDIO_CHUNK_SENT
+  76545.2 09:02:01.139 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle of a standard"
+  76545.3 09:02:01.139 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Can you walk me through the life cycle of a standard"
+  76545.3 09:02:01.139 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_002" transcript="Can you walk me through the life cycle of a standard"
+  78374.8 09:02:02.968 AUDIO_CHUNK_SENT
+    78647 09:02:03.240 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  78647.1 09:02:03.240 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  78647.1 09:02:03.240 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_002" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  79545.4 09:02:04.139 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  79545.5 09:02:04.139 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  79545.6 09:02:04.139 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_002" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  80444.2 09:02:05.038 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  80444.3 09:02:05.038 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  80444.4 09:02:05.038 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_002" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  80473.5 09:02:05.067 AUDIO_CHUNK_SENT
+  81649.4 09:02:06.243 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  81649.4 09:02:06.243 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  81649.4 09:02:06.243 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_002" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  82545.2 09:02:07.139 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  82545.3 09:02:07.139 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  82545.5 09:02:07.139 PAUSE_ENDED turnId="turn_002" questionState="LISTENING"
+  82545.6 09:02:07.139 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_002" transcript="Can you walk me through the life cycle of a standard Boomi process?"
+  82573.2 09:02:07.166 AUDIO_CHUNK_SENT
+  84674.2 09:02:09.267 AUDIO_CHUNK_SENT
+  86773.9 09:02:11.367 AUDIO_CHUNK_SENT
+  86987.9 09:02:11.581 SESSION_ENDED reason="app_shutdown"
+    86988 09:02:11.581 SESSION_SUMMARY

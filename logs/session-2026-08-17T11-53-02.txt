@@ -1,0 +1,125 @@
+# BOOMI COMPANION — DIAGNOSTIC SESSION
+# sessionId: session_20260817_115302_722
+# started:   2026-08-17T06:23:02.128+05:30
+# domain:    Boomi
+# mode:      diagnostic
+# NOTE: transcript content is intentionally logged (developer test mode).
+# Source of truth: session-2026-08-17T11-53-02.jsonl
+      3.3 06:23:02.132 SESSION_STARTED
+      5.5 06:23:02.134 QUESTION_STATE_CHANGED questionState="LISTENING" reason="engine_start"
+    479.4 06:23:02.608 DEEPGRAM_CONNECTING
+   1703.7 06:23:03.832 DEEPGRAM_CONNECTED
+   1763.3 06:23:03.892 PAUSE questionState="LISTENING"
+   1764.3 06:23:03.893 QUESTION_STATE_CHANGED questionState="PAUSED" reason="user_pause"
+   2231.6 06:23:04.360 AUDIO_STARTED
+   2233.5 06:23:04.362 MEDIARECORDER_CREATED
+   2235.9 06:23:04.364 MEDIARECORDER_STARTED
+   9817.3 06:23:11.946 CLEAR questionState="PAUSED"
+  12235.4 06:23:14.364 RESUME questionState="PAUSED"
+  12235.8 06:23:14.364 QUESTION_STATE_CHANGED questionState="LISTENING" reason="user_resume"
+  12335.8 06:23:14.464 AUDIO_CHUNK_SENT
+  14324.4 06:23:16.453 SEMANTIC_CHANGE questionState="LISTENING" reason="first_utterance"
+  14325.3 06:23:16.454 TURN_STARTED turnId="turn_001" questionState="LISTENING" reason="new_utterance"
+  14325.4 06:23:16.454 TRANSCRIPT_BUFFER_UPDATED turnId="turn_001" questionState="LISTENING"
+  14325.5 06:23:16.454 TRANSCRIPT_FINAL turnId="turn_001" questionState="LISTENING" transcript="What is the difference between an Atom and a Molecule?"
+  14326.1 06:23:16.454 QUESTION_STATE_CHANGED turnId="turn_001" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+  14326.8 06:23:16.455 TIMER_STARTED turnId="turn_001" questionState="QUESTION_BUILDING"
+  14427.3 06:23:16.556 AUDIO_CHUNK_SENT
+  14728.7 06:23:16.857 PAUSE_STARTED turnId="turn_001" questionState="QUESTION_BUILDING"
+  14729.2 06:23:16.857 QUESTION_STATE_CHANGED turnId="turn_001" questionState="PAUSE_DETECTED" reason="pause_possible"
+  14729.5 06:23:16.858 TIMER_CANCELLED turnId="turn_001" questionState="PAUSE_DETECTED"
+  14729.6 06:23:16.858 TIMER_STARTED turnId="turn_001" questionState="PAUSE_DETECTED"
+  15027.6 06:23:17.156 PAUSE_UPDATED turnId="turn_001" questionState="PAUSE_DETECTED"
+  15027.8 06:23:17.156 BOUNDARY_CANDIDATE turnId="turn_001" questionState="PAUSE_DETECTED" reason="pause_threshold_reached" transcript="What is the difference between an Atom and a Molecule?"
+  15028.2 06:23:17.156 PERFORMANCE_MARK turnId="turn_001"
+  15028.7 06:23:17.157 QUESTION_STATE_CHANGED turnId="turn_001" questionState="QUESTION_BOUNDARY_LIKELY" reason="pause_threshold_700ms"
+  15028.8 06:23:17.157 TIMER_CANCELLED turnId="turn_001" questionState="QUESTION_BOUNDARY_LIKELY"
+    15029 06:23:17.157 TIMER_STARTED turnId="turn_001" questionState="QUESTION_BOUNDARY_LIKELY"
+  15130.4 06:23:17.259 TIMER_CANCELLED turnId="turn_001" questionState="QUESTION_BOUNDARY_LIKELY"
+  15131.4 06:23:17.260 BOUNDARY_DECISION turnId="turn_001" questionState="QUESTION_BOUNDARY_LIKELY" decision="FINALIZE" reason="question_mark_confident" transcript="What is the difference between an Atom and a Molecule?"
+  15132.8 61 QUESTION_SNAPSHOT_CREATED turnId="turn_001" questionState="QUESTION_COMPLETE" decision="finalize" transcript="What is the difference between an Atom and a Molecule?"
+  15132.9 06:23:17.261 PERFORMANCE_MARK turnId="turn_001"
+  15132.9 06:23:17.261 PERFORMANCE_MARK turnId="turn_001"
+  15146.9 06:23:17.275 QUESTION_STATE_CHANGED turnId="turn_001" questionState="ANSWERING" reason="final_answer_started"
+  16009.9 06:23:18.138 PROVIDER_SUCCESS
+  16010.5 06:23:18.139 QUESTION_STATE_CHANGED turnId="turn_001" questionState="ANSWER_READY" reason="answer_complete"
+  16011.1 06:23:18.139 TURN_COMPLETED turnId="turn_001" questionState="ANSWER_READY" transcript="What is the difference between an Atom and a Molecule?"
+  16011.3 06:23:18.140 ANSWER_DELIVERED turnId="turn_001" questionState="ANSWER_READY"
+  16014.4 06:23:18.143 TIMER_STARTED turnId="turn_001" questionState="ANSWER_READY"
+  16527.4 06:23:18.656 AUDIO_CHUNK_SENT
+  16895.4 06:23:19.024 PAUSE_ENDED turnId="turn_001" questionState="ANSWER_READY"
+  16897.1 06:23:19.025 SEMANTIC_CHANGE turnId="turn_001" questionState="ANSWER_READY" reason="question_type_flip"
+  16897.2 06:23:19.025 TIMER_CANCELLED turnId="turn_001" questionState="ANSWER_READY"
+  16897.4 06:23:19.026 TURN_ARCHIVED turnId="turn_002" questionState="ANSWER_READY"
+  16897.9 06:23:19.026 TURN_STARTED turnId="turn_002" questionState="ANSWER_READY" reason="new_utterance"
+  16897.9 06:23:19.026 TRANSCRIPT_BUFFER_UPDATED turnId="turn_002" questionState="ANSWER_READY"
+  16897.9 06:23:19.026 TRANSCRIPT_FINAL turnId="turn_002" questionState="ANSWER_READY" transcript="How does Flow Control work?"
+  16898.7 06:23:19.027 QUESTION_STATE_CHANGED turnId="turn_002" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+  16901.4 06:23:19.030 TIMER_STARTED turnId="turn_002" questionState="QUESTION_BUILDING"
+  17304.4 06:23:19.433 PAUSE_STARTED turnId="turn_002" questionState="QUESTION_BUILDING"
+    17305 06:23:19.433 QUESTION_STATE_CHANGED turnId="turn_002" questionState="PAUSE_DETECTED" reason="pause_possible"
+  17305.5 06:23:19.434 TIMER_CANCELLED turnId="turn_002" questionState="PAUSE_DETECTED"
+  17305.6 06:23:19.434 TIMER_STARTED turnId="turn_002" questionState="PAUSE_DETECTED"
+  17599.7 06:23:19.728 PAUSE_UPDATED turnId="turn_002" questionState="PAUSE_DETECTED"
+  17599.9 06:23:19.728 BOUNDARY_CANDIDATE turnId="turn_002" questionState="PAUSE_DETECTED" reason="pause_threshold_reached" transcript="How does Flow Control work?"
+  17600.1 06:23:19.728 PERFORMANCE_MARK turnId="turn_002"
+  17600.3 06:23:19.729 QUESTION_STATE_CHANGED turnId="turn_002" questionState="QUESTION_BOUNDARY_LIKELY" reason="pause_threshold_700ms"
+  17600.5 06:23:19.729 TIMER_CANCELLED turnId="turn_002" questionState="QUESTION_BOUNDARY_LIKELY"
+  17600.6 06:23:19.729 TIMER_STARTED turnId="turn_002" questionState="QUESTION_BOUNDARY_LIKELY"
+  17703.8 06:23:19.832 TIMER_CANCELLED turnId="turn_002" questionState="QUESTION_BOUNDARY_LIKELY"
+  17704.2 06:23:19.832 BOUNDARY_DECISION turnId="turn_002" questionState="QUESTION_BOUNDARY_LIKELY" decision="FINALIZE" reason="question_mark_confident" transcript="How does Flow Control work?"
+  17705.3 33 QUESTION_SNAPSHOT_CREATED turnId="turn_002" questionState="QUESTION_COMPLETE" decision="finalize" transcript="How does Flow Control work?"
+  17705.4 06:23:19.834 PERFORMANCE_MARK turnId="turn_002"
+  17705.4 06:23:19.834 PERFORMANCE_MARK turnId="turn_002"
+  17706.6 06:23:19.835 QUESTION_STATE_CHANGED turnId="turn_002" questionState="ANSWERING" reason="final_answer_started"
+  18350.5 06:23:20.479 PROVIDER_SUCCESS
+  18350.8 06:23:20.479 QUESTION_STATE_CHANGED turnId="turn_002" questionState="ANSWER_READY" reason="answer_complete"
+    18351 06:23:20.479 TURN_COMPLETED turnId="turn_002" questionState="ANSWER_READY" transcript="How does Flow Control work?"
+    18351 06:23:20.479 ANSWER_DELIVERED turnId="turn_002" questionState="ANSWER_READY"
+  18352.6 06:23:20.481 TIMER_STARTED turnId="turn_002" questionState="ANSWER_READY"
+    18628 06:23:20.756 AUDIO_CHUNK_SENT
+  19214.6 06:23:21.343 PAUSE_ENDED turnId="turn_002" questionState="ANSWER_READY"
+  19215.8 06:23:21.344 SEMANTIC_CHANGE turnId="turn_002" questionState="ANSWER_READY" reason="content_expanded"
+  19215.9 06:23:21.344 TIMER_CANCELLED turnId="turn_002" questionState="ANSWER_READY"
+  19216.3 06:23:21.345 TURN_ARCHIVED turnId="turn_003" questionState="ANSWER_READY"
+  19216.8 06:23:21.345 TURN_STARTED turnId="turn_003" questionState="ANSWER_READY" reason="new_utterance"
+  19216.8 06:23:21.345 TRANSCRIPT_BUFFER_UPDATED turnId="turn_003" questionState="ANSWER_READY"
+  19216.9 06:23:21.345 TRANSCRIPT_FINAL turnId="turn_003" questionState="ANSWER_READY" transcript="Explain Dynamic Document Properties."
+  19217.2 06:23:21.345 QUESTION_STATE_CHANGED turnId="turn_003" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+  19217.5 06:23:21.346 TIMER_STARTED turnId="turn_003" questionState="QUESTION_BUILDING"
+  19616.9 06:23:21.745 PAUSE_STARTED turnId="turn_003" questionState="QUESTION_BUILDING"
+  19617.5 06:23:21.746 QUESTION_STATE_CHANGED turnId="turn_003" questionState="PAUSE_DETECTED" reason="pause_possible"
+    19618 06:23:21.746 TIMER_CANCELLED turnId="turn_003" questionState="PAUSE_DETECTED"
+  19618.2 06:23:21.746 TIMER_STARTED turnId="turn_003" questionState="PAUSE_DETECTED"
+  19929.7 06:23:22.058 PAUSE_UPDATED turnId="turn_003" questionState="PAUSE_DETECTED"
+    19930 06:23:22.058 BOUNDARY_CANDIDATE turnId="turn_003" questionState="PAUSE_DETECTED" reason="pause_threshold_reached" transcript="Explain Dynamic Document Properties."
+    19930 06:23:22.058 PERFORMANCE_MARK turnId="turn_003"
+  19930.4 06:23:22.059 QUESTION_STATE_CHANGED turnId="turn_003" questionState="QUESTION_BOUNDARY_LIKELY" reason="pause_threshold_700ms"
+  19930.7 06:23:22.059 TIMER_CANCELLED turnId="turn_003" questionState="QUESTION_BOUNDARY_LIKELY"
+  19930.8 06:23:22.059 TIMER_STARTED turnId="turn_003" questionState="QUESTION_BOUNDARY_LIKELY"
+  20018.9 06:23:22.147 TIMER_CANCELLED turnId="turn_003" questionState="QUESTION_BOUNDARY_LIKELY"
+    20019 06:23:22.147 BOUNDARY_DECISION turnId="turn_003" questionState="QUESTION_BOUNDARY_LIKELY" decision="CONTINUE" reason="moderate_confidence" transcript="Explain Dynamic Document Properties."
+  20019.8 06:23:22.148 QUESTION_STATE_CHANGED turnId="turn_003" questionState="WAITING_FOR_MORE" reason="sniper_boundary_deferred"
+  20020.1 06:23:22.148 TIMER_STARTED turnId="turn_003" questionState="WAITING_FOR_MORE"
+  20702.6 06:23:22.831 DEEPGRAM_DISCONNECTED
+  20702.7 06:23:22.831 DEEPGRAM_RECONNECTING
+  20703.2 06:23:22.831 AUDIO_CHUNK_SKIPPED reason="deepgram_socket_not_open"
+  22710.8 06:23:24.839 DEEPGRAM_CONNECTING
+  23607.1 06:23:25.735 DEEPGRAM_CONNECTED
+  23906.8 06:23:26.035 AUDIO_CHUNK_SENT
+  26007.4 06:23:28.136 AUDIO_CHUNK_SENT
+  27456.1 06:23:29.584 QUESTION_STATE_CHANGED turnId="turn_003" questionState="ANSWERING" reason="regenerate_requested"
+  28109.9 06:23:30.238 AUDIO_CHUNK_SENT
+  28150.3 06:23:30.279 PROVIDER_SUCCESS
+  28150.7 06:23:30.279 QUESTION_STATE_CHANGED turnId="turn_003" questionState="ANSWER_READY" reason="regenerate_complete"
+  28152.8 06:23:30.281 TIMER_STARTED turnId="turn_003" questionState="ANSWER_READY"
+  30207.3 06:23:32.335 AUDIO_CHUNK_SENT
+    32307 06:23:34.435 AUDIO_CHUNK_SENT
+  34406.9 06:23:36.535 AUDIO_CHUNK_SENT
+  35039.1 06:23:37.167 QUESTION_STATE_CHANGED turnId="turn_003" questionState="LISTENING" reason="idle_wait_expired"
+  36508.4 06:23:38.637 AUDIO_CHUNK_SENT
+  38616.2 06:23:40.744 AUDIO_CHUNK_SENT
+  40707.8 06:23:42.836 AUDIO_CHUNK_SENT
+  42807.8 06:23:44.936 AUDIO_CHUNK_SENT
+  44907.4 06:23:47.036 AUDIO_CHUNK_SENT
+  47007.8 06:23:49.136 AUDIO_CHUNK_SENT

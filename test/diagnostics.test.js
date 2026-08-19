@@ -616,7 +616,8 @@ async function main() {
       clearTimeoutFn: timer.clearTimeout.bind(timer),
       nowFn: () => timer.getNow(),
       fastPathCall: mocks.fastPathCall,
-      answerCall: mocks.answerCall
+      answerCall: mocks.answerCall,
+      cfg: { sniperMode: false }
     });
     engine.start();
 
@@ -674,7 +675,8 @@ async function main() {
       clearTimeoutFn: timer.clearTimeout.bind(timer),
       nowFn: () => timer.getNow(),
       fastPathCall: mocks.fastPathCall,
-      answerCall: mocks.answerCall
+      answerCall: mocks.answerCall,
+      cfg: { sniperMode: false }
     });
     engine.start();
     engine.processTranscript('How do you handle errors', false);
@@ -713,7 +715,8 @@ async function main() {
       clearTimeoutFn: timer.clearTimeout.bind(timer),
       nowFn: () => timer.getNow(),
       fastPathCall: mocks.fastPathCall,
-      answerCall: mocks.answerCall
+      answerCall: mocks.answerCall,
+      cfg: { sniperMode: false }
     });
     engine.start();
     engine.processTranscript('What is Boomi', false);

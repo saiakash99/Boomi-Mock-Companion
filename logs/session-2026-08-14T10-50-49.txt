@@ -1,0 +1,692 @@
+# BOOMI COMPANION — DIAGNOSTIC SESSION
+# sessionId: session_20260814_105049_512
+# started:   2026-08-14T05:20:49.772+05:30
+# domain:    Boomi
+# mode:      diagnostic
+# NOTE: transcript content is intentionally logged (developer test mode).
+# Source of truth: session-2026-08-14T10-50-49.jsonl
+      1.9 05:20:49.774 SESSION_STARTED
+        3 05:20:49.775 QUESTION_STATE_CHANGED questionState="LISTENING" reason="engine_start"
+     71.8 05:20:49.844 DEEPGRAM_CONNECTING
+   1004.5 05:20:50.777 DEEPGRAM_CONNECTED
+   1044.8 05:20:50.817 AUDIO_STARTED
+   1047.1 05:20:50.819 MEDIARECORDER_CREATED
+   1049.6 05:20:50.822 MEDIARECORDER_STARTED
+   1357.5 05:20:51.130 AUDIO_CHUNK_SENT
+   3447.1 05:20:53.219 AUDIO_CHUNK_SENT
+   5546.9 05:20:55.319 AUDIO_CHUNK_SENT
+   7646.4 05:20:57.419 AUDIO_CHUNK_SENT
+   9746.5 05:20:59.519 AUDIO_CHUNK_SENT
+  11845.6 05:21:01.618 AUDIO_CHUNK_SENT
+  13947.1 05:21:03.719 AUDIO_CHUNK_SENT
+  16046.4 05:21:05.819 AUDIO_CHUNK_SENT
+  18147.9 05:21:07.920 AUDIO_CHUNK_SENT
+  20248.7 05:21:10.021 AUDIO_CHUNK_SENT
+  20505.1 05:21:10.277 PERFORMANCE_MARK turnId="_global_"
+    20817 05:21:10.589 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="A"
+  20818.1 05:21:10.590 TRANSCRIPT_SENT_TO_UI transcript="A"
+  20821.4 05:21:10.594 TRANSCRIPT_SENT_TO_ENGINE transcript="A"
+  22027.7 05:21:11.800 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Hello. Yeah. Hello. Yeah."
+  22027.8 05:21:11.800 TRANSCRIPT_SENT_TO_UI transcript="Hello. Yeah. Hello. Yeah."
+  22032.8 05:21:11.805 SEMANTIC_CHANGE questionState="LISTENING" reason="first_utterance"
+  22035.7 05:21:11.808 TURN_STARTED turnId="turn_001" questionState="LISTENING" reason="new_utterance"
+  22035.9 05:21:11.808 TRANSCRIPT_BUFFER_UPDATED turnId="turn_001" questionState="LISTENING"
+  22036.5 05:21:11.809 TRANSCRIPT_INTERIM turnId="turn_001" questionState="LISTENING" transcript="Hello. Yeah. Hello. Yeah."
+  22036.8 05:21:11.809 PERFORMANCE_MARK turnId="turn_001"
+  22038.3 05:21:11.811 QUESTION_STATE_CHANGED turnId="turn_001" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+  22041.1 05:21:11.813 DEEPGRAM_ERROR
+  22408.4 05:21:12.181 AUDIO_CHUNK_SENT
+  22968.3 05:21:12.741 PERFORMANCE_MARK turnId="turn_001"
+  22987.7 05:21:12.760 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Hello. Yeah. Hello. Yeah. Hello. Yeah."
+  22987.9 05:21:12.760 TRANSCRIPT_SENT_TO_UI turnId="turn_001" transcript="Hello. Yeah. Hello. Yeah. Hello. Yeah."
+  22989.3 05:21:12.762 DEEPGRAM_ERROR
+  24176.2 05:21:13.949 SPEECH_FINAL turnId="turn_001" questionState="SPEECH_ACTIVE" transcript="Hello. Yeah. Hello. Yeah. Hello. Yeah."
+  24177.3 05:21:13.950 BOUNDARY_DECISION turnId="turn_001" questionState="SPEECH_ACTIVE" decision="WAIT_FOR_MORE" reason="not_a_question" transcript="Hello. Yeah. Hello. Yeah. Hello. Yeah."
+  24177.6 05:21:13.950 QUESTION_STATE_CHANGED turnId="turn_001" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  24178.3 05:21:13.951 DEEPGRAM_ERROR
+  24509.4 05:21:14.282 AUDIO_CHUNK_SENT
+  24765.2 05:21:14.538 PERFORMANCE_MARK turnId="turn_001"
+  25085.1 05:21:14.857 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Am I audible?"
+  25085.2 05:21:14.858 TRANSCRIPT_SENT_TO_UI turnId="turn_001" transcript="Am I audible?"
+  25086.4 05:21:14.859 SEMANTIC_CHANGE turnId="turn_001" questionState="WAITING_FOR_MORE" reason="question_mark_added"
+  25087.1 05:21:14.859 TURN_ARCHIVED turnId="turn_002" questionState="WAITING_FOR_MORE"
+  25087.5 05:21:14.860 TURN_STARTED turnId="turn_002" questionState="WAITING_FOR_MORE" reason="new_utterance"
+  25087.6 05:21:14.860 TRANSCRIPT_BUFFER_UPDATED turnId="turn_002" questionState="WAITING_FOR_MORE"
+  25087.6 05:21:14.860 TRANSCRIPT_INTERIM turnId="turn_002" questionState="WAITING_FOR_MORE" transcript="Am I audible?"
+  25087.7 05:21:14.860 PERFORMANCE_MARK turnId="turn_002"
+  25088.2 05:21:14.861 QUESTION_STATE_CHANGED turnId="turn_002" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+  25089.1 05:21:14.861 DEEPGRAM_ERROR
+  25983.4 05:21:15.756 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Yeah."
+    25984 05:21:15.756 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Yeah."
+  25984.4 05:21:15.757 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_002" transcript="Yeah."
+  25984.8 05:21:15.757 SPEECH_FINAL turnId="turn_002" questionState="SPEECH_ACTIVE" transcript="Am I audible?"
+  25985.1 05:21:15.757 BOUNDARY_DECISION turnId="turn_002" questionState="SPEECH_ACTIVE" decision="WAIT_FOR_MORE" reason="not_a_question" transcript="Am I audible?"
+  25985.3 05:21:15.758 QUESTION_STATE_CHANGED turnId="turn_002" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  25985.8 05:21:15.758 DEEPGRAM_ERROR
+  26264.6 05:21:16.037 PERFORMANCE_MARK turnId="turn_002"
+  26608.7 05:21:16.381 AUDIO_CHUNK_SENT
+  26878.6 05:21:16.651 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Let's"
+  26878.7 05:21:16.651 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Let's"
+  26879.1 05:21:16.651 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_002" transcript="Let's"
+  28083.4 05:21:17.856 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Let's start the interview now."
+  28083.6 05:21:17.856 TRANSCRIPT_SENT_TO_UI turnId="turn_002" transcript="Let's start the interview now."
+  28084.4 05:21:17.857 SEMANTIC_CHANGE turnId="turn_002" questionState="WAITING_FOR_MORE" reason="content_expanded"
+  28084.7 05:21:17.857 TURN_ARCHIVED turnId="turn_003" questionState="WAITING_FOR_MORE"
+  28084.8 05:21:17.857 TURN_STARTED turnId="turn_003" questionState="WAITING_FOR_MORE" reason="new_utterance"
+  28084.8 05:21:17.857 TRANSCRIPT_BUFFER_UPDATED turnId="turn_003" questionState="WAITING_FOR_MORE"
+  28084.9 05:21:17.857 TRANSCRIPT_INTERIM turnId="turn_003" questionState="WAITING_FOR_MORE" transcript="Let's start the interview now."
+  28084.9 05:21:17.857 PERFORMANCE_MARK turnId="turn_003"
+  28085.1 05:21:17.857 QUESTION_STATE_CHANGED turnId="turn_003" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+  28085.6 05:21:17.858 DEEPGRAM_ERROR
+  28382.1 05:21:18.154 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Let's start the interview now."
+  28382.1 05:21:18.155 TRANSCRIPT_SENT_TO_UI turnId="turn_003" transcript="Let's start the interview now."
+  28382.4 05:21:18.155 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_003" transcript="Let's start the interview now."
+  28688.4 05:21:18.461 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Let's start the interview now."
+  28688.5 05:21:18.461 TRANSCRIPT_SENT_TO_UI turnId="turn_003" transcript="Let's start the interview now."
+  28688.9 05:21:18.461 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_003" transcript="Let's start the interview now."
+  28688.9 05:21:18.461 SPEECH_FINAL turnId="turn_003" questionState="SPEECH_ACTIVE" transcript="Let's start the interview now."
+  28689.2 05:21:18.462 BOUNDARY_DECISION turnId="turn_003" questionState="SPEECH_ACTIVE" decision="WAIT_FOR_MORE" reason="not_a_question" transcript="Let's start the interview now."
+  28689.6 05:21:18.462 QUESTION_STATE_CHANGED turnId="turn_003" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  28692.2 05:21:18.465 DEEPGRAM_ERROR
+  28708.6 05:21:18.481 AUDIO_CHUNK_SENT
+  29865.4 05:21:19.638 PERFORMANCE_MARK turnId="turn_003"
+  30787.1 05:21:20.559 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Okay."
+  30787.4 05:21:20.560 TRANSCRIPT_SENT_TO_UI turnId="turn_003" transcript="Okay."
+  30787.7 05:21:20.560 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_003" transcript="Okay."
+  30809.2 05:21:20.582 AUDIO_CHUNK_SENT
+  31383.6 05:21:21.156 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Okay."
+  31383.8 05:21:21.156 TRANSCRIPT_SENT_TO_UI turnId="turn_003" transcript="Okay."
+  31384.2 05:21:21.156 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_003" transcript="Okay."
+  31384.6 05:21:21.157 SPEECH_FINAL turnId="turn_003" questionState="WAITING_FOR_MORE" transcript="Let's start the interview now."
+  31966.5 05:21:21.739 PERFORMANCE_MARK turnId="turn_003"
+  32586.1 05:21:22.358 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="What"
+  32586.3 05:21:22.359 TRANSCRIPT_SENT_TO_UI turnId="turn_003" transcript="What"
+  32586.6 05:21:22.359 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_003" transcript="What"
+  32908.5 05:21:22.681 AUDIO_CHUNK_SENT
+  33482.1 05:21:23.254 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="What is the difference"
+  33482.3 05:21:23.255 TRANSCRIPT_SENT_TO_UI turnId="turn_003" transcript="What is the difference"
+  33482.9 05:21:23.255 SEMANTIC_CHANGE turnId="turn_003" questionState="WAITING_FOR_MORE" reason="content_expanded"
+  33483.4 05:21:23.256 TURN_ARCHIVED turnId="turn_004" questionState="WAITING_FOR_MORE"
+  33484.3 05:21:23.257 TURN_STARTED turnId="turn_004" questionState="WAITING_FOR_MORE" reason="new_utterance"
+  33484.6 05:21:23.257 TRANSCRIPT_BUFFER_UPDATED turnId="turn_004" questionState="WAITING_FOR_MORE"
+  33484.7 05:21:23.257 TRANSCRIPT_INTERIM turnId="turn_004" questionState="WAITING_FOR_MORE" transcript="What is the difference"
+  33484.9 05:21:23.257 PERFORMANCE_MARK turnId="turn_004"
+  33485.3 05:21:23.258 QUESTION_STATE_CHANGED turnId="turn_004" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+  33486.7 05:21:23.259 DEEPGRAM_ERROR
+  34082.3 05:21:23.854 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="What is the difference between"
+  34082.4 05:21:23.855 TRANSCRIPT_SENT_TO_UI turnId="turn_004" transcript="What is the difference between"
+  34083.1 05:21:23.855 SEMANTIC_CHANGE turnId="turn_004" questionState="QUESTION_BUILDING" reason="question_type_flip"
+  34083.2 05:21:23.856 TRANSCRIPT_BUFFER_UPDATED turnId="turn_004" questionState="QUESTION_BUILDING"
+  34083.3 05:21:23.856 TRANSCRIPT_FINAL turnId="turn_004" questionState="QUESTION_BUILDING" transcript="What is the difference between"
+  34083.6 05:21:23.856 DEEPGRAM_ERROR
+  34365.4 05:21:24.138 PERFORMANCE_MARK turnId="turn_004"
+    35007 05:21:24.779 AUDIO_CHUNK_SENT
+  35278.4 05:21:25.051 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="an atom and"
+  35278.6 05:21:25.051 TRANSCRIPT_SENT_TO_UI turnId="turn_004" transcript="an atom and"
+  35279.2 05:21:25.051 SEMANTIC_CHANGE turnId="turn_004" questionState="QUESTION_BUILDING" reason="domain_term_added"
+  35279.5 05:21:25.052 TURN_ARCHIVED turnId="turn_005" questionState="QUESTION_BUILDING"
+  35279.6 05:21:25.052 TURN_STARTED turnId="turn_005" questionState="QUESTION_BUILDING" reason="new_utterance"
+  35279.6 05:21:25.052 TRANSCRIPT_BUFFER_UPDATED turnId="turn_005" questionState="QUESTION_BUILDING"
+  35279.7 05:21:25.052 TRANSCRIPT_INTERIM turnId="turn_005" questionState="QUESTION_BUILDING" transcript="an atom and"
+  35279.8 05:21:25.052 PERFORMANCE_MARK turnId="turn_005"
+  35280.1 05:21:25.052 QUESTION_STATE_CHANGED turnId="turn_005" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  35280.6 05:21:25.053 DEEPGRAM_ERROR
+  36185.5 05:21:25.958 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="atom and a molecule in the"
+  36185.6 05:21:25.958 TRANSCRIPT_SENT_TO_UI turnId="turn_005" transcript="atom and a molecule in the"
+  36186.5 05:21:25.959 SEMANTIC_CHANGE turnId="turn_005" questionState="WAITING_FOR_MORE" reason="domain_term_added"
+  36186.6 05:21:25.959 TRANSCRIPT_BUFFER_UPDATED turnId="turn_005" questionState="WAITING_FOR_MORE"
+  36186.6 05:21:25.959 TRANSCRIPT_INTERIM turnId="turn_005" questionState="WAITING_FOR_MORE" transcript="atom and a molecule in the"
+  36186.6 05:21:25.959 PERFORMANCE_MARK turnId="turn_005"
+  36187.3 05:21:25.960 DEEPGRAM_ERROR
+    37105 05:21:26.877 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="atom and a molecule in the bony?"
+  37105.2 05:21:26.877 TRANSCRIPT_SENT_TO_UI turnId="turn_005" transcript="atom and a molecule in the bony?"
+  37105.5 05:21:26.878 SEMANTIC_CHANGE turnId="turn_005" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+  37105.6 05:21:26.878 TRANSCRIPT_BUFFER_UPDATED turnId="turn_005" questionState="WAITING_FOR_MORE"
+  37105.7 05:21:26.878 TRANSCRIPT_FINAL turnId="turn_005" questionState="WAITING_FOR_MORE" transcript="atom and a molecule in the bony?"
+  37105.8 05:21:26.878 QUESTION_STATE_CHANGED turnId="turn_005" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+  37106.3 05:21:26.879 DEEPGRAM_ERROR
+  37111.3 05:21:26.884 AUDIO_CHUNK_SENT
+  39208.4 05:21:28.981 AUDIO_CHUNK_SENT
+  41308.1 05:21:31.080 AUDIO_CHUNK_SENT
+  42975.2 05:21:32.747 QUESTION_STATE_CHANGED turnId="turn_005" questionState="ANSWERING" reason="regenerate_requested"
+  43407.7 05:21:33.180 AUDIO_CHUNK_SENT
+  43609.5 05:21:33.382 QUESTION_STATE_CHANGED turnId="turn_005" questionState="ANSWER_READY" reason="regenerate_complete"
+  43615.8 05:21:33.388 ERROR turnId="turn_005" questionState="ANSWER_READY"
+  45507.7 05:21:35.280 AUDIO_CHUNK_SENT
+  47607.4 05:21:37.380 AUDIO_CHUNK_SENT
+  49707.7 05:21:39.480 AUDIO_CHUNK_SENT
+  51807.1 05:21:41.579 AUDIO_CHUNK_SENT
+  53908.3 05:21:43.681 AUDIO_CHUNK_SENT
+  54464.7 05:21:44.237 PERFORMANCE_MARK turnId="turn_005"
+  55080.6 05:21:44.853 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Okay. I'm"
+  55080.8 05:21:44.853 TRANSCRIPT_SENT_TO_UI turnId="turn_005" transcript="Okay. I'm"
+  55080.9 05:21:44.853 SEMANTIC_CHANGE turnId="turn_005" questionState="ANSWER_READY" reason="content_expanded"
+  55081.1 05:21:44.853 TURN_ARCHIVED turnId="turn_006" questionState="ANSWER_READY"
+  55081.1 05:21:44.853 TURN_STARTED turnId="turn_006" questionState="ANSWER_READY" reason="new_utterance"
+  55081.3 05:21:44.854 TRANSCRIPT_BUFFER_UPDATED turnId="turn_006" questionState="ANSWER_READY"
+  55081.5 05:21:44.854 TRANSCRIPT_INTERIM turnId="turn_006" questionState="ANSWER_READY" transcript="Okay. I'm"
+  55081.5 05:21:44.854 PERFORMANCE_MARK turnId="turn_006"
+  55081.8 05:21:44.854 QUESTION_STATE_CHANGED turnId="turn_006" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  55082.3 05:21:44.855 DEEPGRAM_ERROR
+  56008.4 05:21:45.781 AUDIO_CHUNK_SENT
+  56278.5 05:21:46.051 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Okay. I'm asking one"
+  56278.6 05:21:46.051 TRANSCRIPT_SENT_TO_UI turnId="turn_006" transcript="Okay. I'm asking one"
+    56279 05:21:46.051 SEMANTIC_CHANGE turnId="turn_006" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+  56279.1 05:21:46.051 TRANSCRIPT_BUFFER_UPDATED turnId="turn_006" questionState="WAITING_FOR_MORE"
+  56279.2 05:21:46.051 TRANSCRIPT_INTERIM turnId="turn_006" questionState="WAITING_FOR_MORE" transcript="Okay. I'm asking one"
+  56279.3 05:21:46.052 PERFORMANCE_MARK turnId="turn_006"
+  56279.5 05:21:46.052 QUESTION_STATE_CHANGED turnId="turn_006" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+  56279.9 05:21:46.052 DEEPGRAM_ERROR
+  57190.8 05:21:46.963 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Okay. I'm asking once again"
+  57191.1 05:21:46.963 TRANSCRIPT_SENT_TO_UI turnId="turn_006" transcript="Okay. I'm asking once again"
+  57191.5 05:21:46.964 SEMANTIC_CHANGE turnId="turn_006" questionState="SPEECH_ACTIVE" reason="content_expanded"
+  57191.7 05:21:46.964 TRANSCRIPT_BUFFER_UPDATED turnId="turn_006" questionState="SPEECH_ACTIVE"
+  57191.7 05:21:46.964 TRANSCRIPT_FINAL turnId="turn_006" questionState="SPEECH_ACTIVE" transcript="Okay. I'm asking once again"
+  57192.3 05:21:46.965 DEEPGRAM_ERROR
+    57465 05:21:47.237 PERFORMANCE_MARK turnId="turn_006"
+  58108.7 05:21:47.881 AUDIO_CHUNK_SENT
+  59585.8 05:21:49.358 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="what is the"
+  59585.9 05:21:49.358 TRANSCRIPT_SENT_TO_UI turnId="turn_006" transcript="what is the"
+  59586.3 05:21:49.359 SEMANTIC_CHANGE turnId="turn_006" questionState="SPEECH_ACTIVE" reason="content_expanded"
+  59586.6 05:21:49.359 TURN_ARCHIVED turnId="turn_007" questionState="SPEECH_ACTIVE"
+  59586.7 05:21:49.359 TURN_STARTED turnId="turn_007" questionState="SPEECH_ACTIVE" reason="new_utterance"
+  59586.8 05:21:49.359 TRANSCRIPT_BUFFER_UPDATED turnId="turn_007" questionState="SPEECH_ACTIVE"
+  59586.9 05:21:49.359 TRANSCRIPT_INTERIM turnId="turn_007" questionState="SPEECH_ACTIVE" transcript="what is the"
+    59587 05:21:49.359 PERFORMANCE_MARK turnId="turn_007"
+  59587.3 05:21:49.360 QUESTION_STATE_CHANGED turnId="turn_007" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  59587.7 05:21:49.360 DEEPGRAM_ERROR
+  59882.5 05:21:49.651 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="what is the"
+  59882.8 05:21:49.652 TRANSCRIPT_SENT_TO_UI turnId="turn_007" transcript="what is the"
+    59883 05:21:49.652 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_007" transcript="what is the"
+    60208 05:21:49.977 AUDIO_CHUNK_SENT
+  60791.1 05:21:50.560 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="what is the difference"
+  60791.2 05:21:50.560 TRANSCRIPT_SENT_TO_UI turnId="turn_007" transcript="what is the difference"
+  60791.7 05:21:50.560 SEMANTIC_CHANGE turnId="turn_007" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+  60791.8 05:21:50.561 TRANSCRIPT_BUFFER_UPDATED turnId="turn_007" questionState="WAITING_FOR_MORE"
+    60792 05:21:50.561 TRANSCRIPT_INTERIM turnId="turn_007" questionState="WAITING_FOR_MORE" transcript="what is the difference"
+    60792 05:21:50.561 PERFORMANCE_MARK turnId="turn_007"
+  60792.3 05:21:50.561 QUESTION_STATE_CHANGED turnId="turn_007" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+  60792.9 05:21:50.562 DEEPGRAM_ERROR
+    61686 05:21:51.455 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="what is the difference between"
+  61686.2 05:21:51.455 TRANSCRIPT_SENT_TO_UI turnId="turn_007" transcript="what is the difference between"
+  61686.5 05:21:51.455 SEMANTIC_CHANGE turnId="turn_007" questionState="QUESTION_BUILDING" reason="question_type_flip"
+  61686.7 05:21:51.455 TRANSCRIPT_BUFFER_UPDATED turnId="turn_007" questionState="QUESTION_BUILDING"
+  61686.7 05:21:51.455 TRANSCRIPT_FINAL turnId="turn_007" questionState="QUESTION_BUILDING" transcript="what is the difference between"
+  61687.1 05:21:51.456 DEEPGRAM_ERROR
+  61966.2 05:21:51.735 PERFORMANCE_MARK turnId="turn_007"
+  62308.8 05:21:52.078 AUDIO_CHUNK_SENT
+  62581.7 05:21:52.350 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="atom"
+  62581.9 05:21:52.351 TRANSCRIPT_SENT_TO_UI turnId="turn_007" transcript="atom"
+  62582.3 05:21:52.351 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_007" transcript="atom"
+  63782.8 05:21:53.552 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="atom and end molecule"
+  63782.9 05:21:53.552 TRANSCRIPT_SENT_TO_UI turnId="turn_007" transcript="atom and end molecule"
+  63783.4 05:21:53.552 SEMANTIC_CHANGE turnId="turn_007" questionState="QUESTION_BUILDING" reason="domain_term_added"
+  63783.5 05:21:53.552 TURN_ARCHIVED turnId="turn_008" questionState="QUESTION_BUILDING"
+  63783.9 05:21:53.553 TURN_STARTED turnId="turn_008" questionState="QUESTION_BUILDING" reason="new_utterance"
+    63784 05:21:53.553 TRANSCRIPT_BUFFER_UPDATED turnId="turn_008" questionState="QUESTION_BUILDING"
+  63784.1 05:21:53.553 TRANSCRIPT_INTERIM turnId="turn_008" questionState="QUESTION_BUILDING" transcript="atom and end molecule"
+  63784.1 05:21:53.553 PERFORMANCE_MARK turnId="turn_008"
+  63784.4 05:21:53.553 QUESTION_STATE_CHANGED turnId="turn_008" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+  63785.2 05:21:53.554 DEEPGRAM_ERROR
+  64408.4 05:21:54.177 AUDIO_CHUNK_SENT
+  64993.2 05:21:54.762 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="atom and ant molecule in bromine."
+  64993.3 05:21:54.762 TRANSCRIPT_SENT_TO_UI turnId="turn_008" transcript="atom and ant molecule in bromine."
+  64993.7 05:21:54.762 SEMANTIC_CHANGE turnId="turn_008" questionState="SPEECH_ACTIVE" reason="content_expanded"
+  64993.9 05:21:54.763 TRANSCRIPT_BUFFER_UPDATED turnId="turn_008" questionState="SPEECH_ACTIVE"
+    64994 05:21:54.763 TRANSCRIPT_FINAL turnId="turn_008" questionState="SPEECH_ACTIVE" transcript="atom and ant molecule in bromine."
+  64994.3 05:21:54.763 DEEPGRAM_ERROR
+  66509.3 05:21:56.278 AUDIO_CHUNK_SENT
+  68607.7 05:21:58.377 AUDIO_CHUNK_SENT
+  70708.4 05:22:00.477 AUDIO_CHUNK_SENT
+  72808.7 05:22:02.577 AUDIO_CHUNK_SENT
+  74909.3 05:22:04.678 AUDIO_CHUNK_SENT
+  77008.8 05:22:06.777 AUDIO_CHUNK_SENT
+  79108.4 05:22:08.877 AUDIO_CHUNK_SENT
+  81208.3 05:22:10.977 AUDIO_CHUNK_SENT
+  83308.1 05:22:13.077 AUDIO_CHUNK_SENT
+  85408.8 05:22:15.178 AUDIO_CHUNK_SENT
+  87508.3 05:22:17.277 AUDIO_CHUNK_SENT
+  89608.3 05:22:19.377 AUDIO_CHUNK_SENT
+  90465.8 05:22:20.235 PERFORMANCE_MARK turnId="turn_008"
+  91709.1 05:22:21.478 AUDIO_CHUNK_SENT
+  91976.4 05:22:21.745 SPEECH_FINAL turnId="turn_008" questionState="SPEECH_ACTIVE" transcript="atom and ant molecule in bromine."
+  91976.8 05:22:21.746 BOUNDARY_DECISION turnId="turn_008" questionState="SPEECH_ACTIVE" decision="WAIT_FOR_MORE" reason="not_a_question" transcript="atom and ant molecule in bromine."
+  91977.3 05:22:21.746 QUESTION_STATE_CHANGED turnId="turn_008" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+  91977.9 05:22:21.747 DEEPGRAM_ERROR
+  93809.3 05:22:23.578 AUDIO_CHUNK_SENT
+  95908.6 05:22:25.677 AUDIO_CHUNK_SENT
+  98008.8 05:22:27.778 AUDIO_CHUNK_SENT
+ 100109.8 05:22:29.879 AUDIO_CHUNK_SENT
+ 100369.2 05:22:30.138 PERFORMANCE_MARK turnId="turn_008"
+ 101582.8 05:22:31.352 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="No. You failed to"
+   101583 05:22:31.352 TRANSCRIPT_SENT_TO_UI turnId="turn_008" transcript="No. You failed to"
+   101584 05:22:31.353 SEMANTIC_CHANGE turnId="turn_008" questionState="WAITING_FOR_MORE" reason="content_expanded"
+ 101584.2 05:22:31.353 TURN_ARCHIVED turnId="turn_009" questionState="WAITING_FOR_MORE"
+ 101584.4 05:22:31.353 TURN_STARTED turnId="turn_009" questionState="WAITING_FOR_MORE" reason="new_utterance"
+ 101584.4 05:22:31.353 TRANSCRIPT_BUFFER_UPDATED turnId="turn_009" questionState="WAITING_FOR_MORE"
+ 101584.4 05:22:31.353 TRANSCRIPT_INTERIM turnId="turn_009" questionState="WAITING_FOR_MORE" transcript="No. You failed to"
+ 101584.6 05:22:31.353 PERFORMANCE_MARK turnId="turn_009"
+ 101584.9 05:22:31.354 DEEPGRAM_ERROR
+ 102208.6 05:22:31.977 AUDIO_CHUNK_SENT
+   102488 05:22:32.257 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="No. You failed to answer this."
+ 102488.1 05:22:32.257 TRANSCRIPT_SENT_TO_UI turnId="turn_009" transcript="No. You failed to answer this."
+ 102488.5 05:22:32.257 SEMANTIC_CHANGE turnId="turn_009" questionState="WAITING_FOR_MORE" reason="content_expanded"
+ 102488.7 05:22:32.257 TRANSCRIPT_BUFFER_UPDATED turnId="turn_009" questionState="WAITING_FOR_MORE"
+ 102488.7 05:22:32.257 TRANSCRIPT_INTERIM turnId="turn_009" questionState="WAITING_FOR_MORE" transcript="No. You failed to answer this."
+ 102488.7 05:22:32.258 PERFORMANCE_MARK turnId="turn_009"
+ 102489.1 05:22:32.258 DEEPGRAM_ERROR
+ 103087.3 05:22:32.856 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="No. You failed to answer this."
+ 103087.4 05:22:32.856 TRANSCRIPT_SENT_TO_UI turnId="turn_009" transcript="No. You failed to answer this."
+ 103087.6 05:22:32.856 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_009" transcript="No. You failed to answer this."
+ 103087.8 05:22:32.857 SPEECH_FINAL turnId="turn_009" questionState="WAITING_FOR_MORE" transcript="No. You failed to answer this."
+ 103087.9 05:22:32.857 BOUNDARY_DECISION turnId="turn_009" questionState="WAITING_FOR_MORE" decision="WAIT_FOR_MORE" reason="incomplete_question" transcript="No. You failed to answer this."
+ 103088.2 05:22:32.857 DEEPGRAM_ERROR
+ 104308.3 05:22:34.077 AUDIO_CHUNK_SENT
+ 104867.5 05:22:34.636 PERFORMANCE_MARK turnId="turn_009"
+ 106087.2 05:22:35.856 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Okay. Let's go to"
+ 106087.3 05:22:35.856 TRANSCRIPT_SENT_TO_UI turnId="turn_009" transcript="Okay. Let's go to"
+ 106087.7 05:22:35.856 SEMANTIC_CHANGE turnId="turn_009" questionState="WAITING_FOR_MORE" reason="content_expanded"
+ 106087.9 05:22:35.857 TURN_ARCHIVED turnId="turn_010" questionState="WAITING_FOR_MORE"
+ 106088.3 05:22:35.857 TURN_STARTED turnId="turn_010" questionState="WAITING_FOR_MORE" reason="new_utterance"
+ 106088.4 05:22:35.857 TRANSCRIPT_BUFFER_UPDATED turnId="turn_010" questionState="WAITING_FOR_MORE"
+ 106088.4 05:22:35.857 TRANSCRIPT_INTERIM turnId="turn_010" questionState="WAITING_FOR_MORE" transcript="Okay. Let's go to"
+ 106088.5 05:22:35.857 PERFORMANCE_MARK turnId="turn_010"
+ 106088.9 05:22:35.858 DEEPGRAM_ERROR
+ 106408.2 05:22:36.177 AUDIO_CHUNK_SENT
+ 107293.3 05:22:37.062 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Okay. Let's go to question number two."
+ 107293.5 05:22:37.062 TRANSCRIPT_SENT_TO_UI turnId="turn_010" transcript="Okay. Let's go to question number two."
+ 107293.9 05:22:37.063 SEMANTIC_CHANGE turnId="turn_010" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+   107294 05:22:37.063 TRANSCRIPT_BUFFER_UPDATED turnId="turn_010" questionState="WAITING_FOR_MORE"
+   107294 05:22:37.063 TRANSCRIPT_FINAL turnId="turn_010" questionState="WAITING_FOR_MORE" transcript="Okay. Let's go to question number two."
+ 107294.3 05:22:37.063 QUESTION_STATE_CHANGED turnId="turn_010" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+ 107295.1 05:22:37.064 DEEPGRAM_ERROR
+ 108509.1 05:22:38.278 AUDIO_CHUNK_SENT
+ 110608.1 05:22:40.377 AUDIO_CHUNK_SENT
+ 111167.9 05:22:40.937 PERFORMANCE_MARK turnId="turn_010"
+ 112387.9 05:22:42.157 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="How to handle"
+ 112388.1 05:22:42.157 TRANSCRIPT_SENT_TO_UI turnId="turn_010" transcript="How to handle"
+ 112388.6 05:22:42.157 SEMANTIC_CHANGE turnId="turn_010" questionState="SPEECH_ACTIVE" reason="content_expanded"
+ 112388.8 05:22:42.158 TURN_ARCHIVED turnId="turn_011" questionState="SPEECH_ACTIVE"
+ 112388.9 05:22:42.158 TURN_STARTED turnId="turn_011" questionState="SPEECH_ACTIVE" reason="new_utterance"
+ 112388.9 05:22:42.158 TRANSCRIPT_BUFFER_UPDATED turnId="turn_011" questionState="SPEECH_ACTIVE"
+   112389 05:22:42.158 TRANSCRIPT_INTERIM turnId="turn_011" questionState="SPEECH_ACTIVE" transcript="How to handle"
+ 112389.1 05:22:42.158 PERFORMANCE_MARK turnId="turn_011"
+ 112389.3 05:22:42.158 QUESTION_STATE_CHANGED turnId="turn_011" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+ 112389.8 05:22:42.159 DEEPGRAM_ERROR
+ 112709.2 05:22:42.478 AUDIO_CHUNK_SENT
+ 113280.3 05:22:43.049 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="How to handle adverse"
+ 113280.4 05:22:43.049 TRANSCRIPT_SENT_TO_UI turnId="turn_011" transcript="How to handle adverse"
+ 113280.7 05:22:43.049 SEMANTIC_CHANGE turnId="turn_011" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+ 113280.7 05:22:43.049 TRANSCRIPT_BUFFER_UPDATED turnId="turn_011" questionState="WAITING_FOR_MORE"
+ 113280.7 05:22:43.049 TRANSCRIPT_INTERIM turnId="turn_011" questionState="WAITING_FOR_MORE" transcript="How to handle adverse"
+ 113280.7 05:22:43.050 PERFORMANCE_MARK turnId="turn_011"
+ 113280.8 05:22:43.050 QUESTION_STATE_CHANGED turnId="turn_011" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+ 113281.1 05:22:43.050 DEEPGRAM_ERROR
+ 114178.7 05:22:43.947 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="How to handle errors in"
+ 114178.7 05:22:43.947 TRANSCRIPT_SENT_TO_UI turnId="turn_011" transcript="How to handle errors in"
+ 114179.2 05:22:43.948 SEMANTIC_CHANGE turnId="turn_011" questionState="QUESTION_BUILDING" reason="domain_term_added"
+ 114179.4 05:22:43.948 TRANSCRIPT_BUFFER_UPDATED turnId="turn_011" questionState="QUESTION_BUILDING"
+ 114179.4 05:22:43.948 TRANSCRIPT_FINAL turnId="turn_011" questionState="QUESTION_BUILDING" transcript="How to handle errors in"
+ 114179.8 05:22:43.949 QUESTION_STATE_CHANGED turnId="turn_011" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+ 114180.2 05:22:43.949 DEEPGRAM_ERROR
+ 114469.4 05:22:44.238 PERFORMANCE_MARK turnId="turn_011"
+   114809 05:22:44.578 AUDIO_CHUNK_SENT
+ 115085.6 05:22:44.854 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="listener process"
+ 115085.7 05:22:44.854 TRANSCRIPT_SENT_TO_UI turnId="turn_011" transcript="listener process"
+ 115086.2 05:22:44.855 SEMANTIC_CHANGE turnId="turn_011" questionState="WAITING_FOR_MORE" reason="domain_term_added"
+ 115086.6 05:22:44.855 TURN_ARCHIVED turnId="turn_012" questionState="WAITING_FOR_MORE"
+ 115086.8 05:22:44.856 TURN_STARTED turnId="turn_012" questionState="WAITING_FOR_MORE" reason="new_utterance"
+ 115086.9 05:22:44.856 TRANSCRIPT_BUFFER_UPDATED turnId="turn_012" questionState="WAITING_FOR_MORE"
+   115087 05:22:44.856 TRANSCRIPT_INTERIM turnId="turn_012" questionState="WAITING_FOR_MORE" transcript="listener process"
+ 115087.1 05:22:44.856 PERFORMANCE_MARK turnId="turn_012"
+ 115087.4 05:22:44.856 DEEPGRAM_ERROR
+ 115982.2 05:22:45.751 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="listener process?"
+ 115982.5 05:22:45.751 TRANSCRIPT_SENT_TO_UI turnId="turn_012" transcript="listener process?"
+ 115982.8 05:22:45.752 SEMANTIC_CHANGE turnId="turn_012" questionState="WAITING_FOR_MORE" reason="question_mark_added"
+ 115983.1 05:22:45.752 TRANSCRIPT_BUFFER_UPDATED turnId="turn_012" questionState="WAITING_FOR_MORE"
+ 115983.4 05:22:45.752 TRANSCRIPT_FINAL turnId="turn_012" questionState="WAITING_FOR_MORE" transcript="listener process?"
+ 115983.8 05:22:45.753 DEEPGRAM_ERROR
+ 116909.1 05:22:46.678 AUDIO_CHUNK_SENT
+ 117465.8 05:22:47.235 PERFORMANCE_MARK turnId="turn_012"
+ 118086.5 05:22:47.855 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="When"
+ 118086.7 05:22:47.856 TRANSCRIPT_SENT_TO_UI turnId="turn_012" transcript="When"
+   118087 05:22:47.856 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_012" transcript="When"
+ 118981.6 05:22:48.750 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="When an external"
+ 118981.7 05:22:48.750 TRANSCRIPT_SENT_TO_UI turnId="turn_012" transcript="When an external"
+ 118982.2 05:22:48.751 SEMANTIC_CHANGE turnId="turn_012" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+ 118982.4 05:22:48.751 TURN_ARCHIVED turnId="turn_013" questionState="WAITING_FOR_MORE"
+ 118982.6 05:22:48.751 TURN_STARTED turnId="turn_013" questionState="WAITING_FOR_MORE" reason="new_utterance"
+ 118982.6 05:22:48.751 TRANSCRIPT_BUFFER_UPDATED turnId="turn_013" questionState="WAITING_FOR_MORE"
+ 118982.7 05:22:48.751 TRANSCRIPT_INTERIM turnId="turn_013" questionState="WAITING_FOR_MORE" transcript="When an external"
+ 118982.8 05:22:48.752 PERFORMANCE_MARK turnId="turn_013"
+   118983 05:22:48.752 QUESTION_STATE_CHANGED turnId="turn_013" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+ 118983.7 05:22:48.752 DEEPGRAM_ERROR
+ 119006.8 05:22:48.776 AUDIO_CHUNK_SENT
+ 120182.1 05:22:49.949 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="When an external API"
+ 120182.3 05:22:49.950 TRANSCRIPT_SENT_TO_UI turnId="turn_013" transcript="When an external API"
+ 120182.9 05:22:49.950 SEMANTIC_CHANGE turnId="turn_013" questionState="QUESTION_BUILDING" reason="domain_term_added"
+   120183 05:22:49.950 TRANSCRIPT_BUFFER_UPDATED turnId="turn_013" questionState="QUESTION_BUILDING"
+ 120183.1 05:22:49.950 TRANSCRIPT_INTERIM turnId="turn_013" questionState="QUESTION_BUILDING" transcript="When an external API"
+ 120183.3 05:22:49.951 PERFORMANCE_MARK turnId="turn_013"
+ 120183.6 05:22:49.951 DEEPGRAM_ERROR
+ 121068.5 05:22:50.836 PERFORMANCE_MARK turnId="turn_013"
+ 121094.5 05:22:50.862 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="When an external API returns to"
+ 121094.6 05:22:50.862 TRANSCRIPT_SENT_TO_UI turnId="turn_013" transcript="When an external API returns to"
+ 121095.1 05:22:50.862 SEMANTIC_CHANGE turnId="turn_013" questionState="QUESTION_BUILDING" reason="content_expanded"
+ 121095.3 05:22:50.863 TRANSCRIPT_BUFFER_UPDATED turnId="turn_013" questionState="QUESTION_BUILDING"
+ 121095.3 05:22:50.863 TRANSCRIPT_FINAL turnId="turn_013" questionState="QUESTION_BUILDING" transcript="When an external API returns to"
+ 121095.7 05:22:50.863 QUESTION_STATE_CHANGED turnId="turn_013" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+ 121096.5 05:22:50.864 DEEPGRAM_ERROR
+ 121109.2 05:22:50.876 AUDIO_CHUNK_SENT
+ 121982.1 05:22:51.749 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="five hundred"
+ 121982.2 05:22:51.750 TRANSCRIPT_SENT_TO_UI turnId="turn_013" transcript="five hundred"
+ 121982.7 05:22:51.750 SEMANTIC_CHANGE turnId="turn_013" questionState="WAITING_FOR_MORE" reason="content_expanded"
+ 121982.9 05:22:51.750 TURN_ARCHIVED turnId="turn_014" questionState="WAITING_FOR_MORE"
+ 121983.1 05:22:51.750 TURN_STARTED turnId="turn_014" questionState="WAITING_FOR_MORE" reason="new_utterance"
+ 121983.2 05:22:51.751 TRANSCRIPT_BUFFER_UPDATED turnId="turn_014" questionState="WAITING_FOR_MORE"
+ 121983.3 05:22:51.751 TRANSCRIPT_INTERIM turnId="turn_014" questionState="WAITING_FOR_MORE" transcript="five hundred"
+ 121983.3 05:22:51.751 PERFORMANCE_MARK turnId="turn_014"
+ 121983.6 05:22:51.751 DEEPGRAM_ERROR
+ 122608.8 05:22:52.376 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="500 error."
+   122609 05:22:52.376 TRANSCRIPT_SENT_TO_UI turnId="turn_014" transcript="500 error."
+ 122609.4 05:22:52.377 SEMANTIC_CHANGE turnId="turn_014" questionState="WAITING_FOR_MORE" reason="content_expanded"
+ 122609.8 05:22:52.377 TURN_ARCHIVED turnId="turn_015" questionState="WAITING_FOR_MORE"
+ 122610.1 05:22:52.377 TURN_STARTED turnId="turn_015" questionState="WAITING_FOR_MORE" reason="new_utterance"
+ 122610.1 05:22:52.378 TRANSCRIPT_BUFFER_UPDATED turnId="turn_015" questionState="WAITING_FOR_MORE"
+ 122610.3 05:22:52.378 TRANSCRIPT_FINAL turnId="turn_015" questionState="WAITING_FOR_MORE" transcript="500 error."
+ 122610.8 05:22:52.378 DEEPGRAM_ERROR
+ 123208.2 05:22:52.976 AUDIO_CHUNK_SENT
+ 125308.4 05:22:55.076 AUDIO_CHUNK_SENT
+ 127408.8 05:22:57.176 AUDIO_CHUNK_SENT
+ 129508.5 05:22:59.276 AUDIO_CHUNK_SENT
+ 131608.2 05:23:01.375 AUDIO_CHUNK_SENT
+ 133708.4 05:23:03.476 AUDIO_CHUNK_SENT
+ 135808.4 05:23:05.576 AUDIO_CHUNK_SENT
+ 137906.6 05:23:07.674 AUDIO_CHUNK_SENT
+   140008 05:23:09.775 AUDIO_CHUNK_SENT
+ 141472.3 05:23:11.240 QUESTION_STATE_CHANGED turnId="turn_015" questionState="ANSWERING" reason="regenerate_requested"
+ 141909.4 05:23:11.677 QUESTION_STATE_CHANGED turnId="turn_015" questionState="ANSWER_READY" reason="regenerate_complete"
+ 141912.4 05:23:11.680 ERROR turnId="turn_015" questionState="ANSWER_READY"
+   142109 05:23:11.876 AUDIO_CHUNK_SENT
+ 144206.4 05:23:13.974 AUDIO_CHUNK_SENT
+ 146309.4 05:23:16.077 AUDIO_CHUNK_SENT
+ 148408.1 05:23:18.175 AUDIO_CHUNK_SENT
+ 150164.9 05:23:19.932 PERFORMANCE_MARK turnId="turn_015"
+ 150485.9 05:23:20.253 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="You've been"
+ 150486.1 05:23:20.253 TRANSCRIPT_SENT_TO_UI turnId="turn_015" transcript="You've been"
+ 150486.5 05:23:20.254 SEMANTIC_CHANGE turnId="turn_015" questionState="ANSWER_READY" reason="content_expanded"
+ 150486.7 05:23:20.254 TURN_ARCHIVED turnId="turn_016" questionState="ANSWER_READY"
+ 150486.8 05:23:20.254 TURN_STARTED turnId="turn_016" questionState="ANSWER_READY" reason="new_utterance"
+ 150486.9 05:23:20.254 TRANSCRIPT_BUFFER_UPDATED turnId="turn_016" questionState="ANSWER_READY"
+   150487 05:23:20.254 TRANSCRIPT_INTERIM turnId="turn_016" questionState="ANSWER_READY" transcript="You've been"
+ 150487.1 05:23:20.254 PERFORMANCE_MARK turnId="turn_016"
+ 150487.2 05:23:20.254 QUESTION_STATE_CHANGED turnId="turn_016" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+ 150487.7 05:23:20.255 DEEPGRAM_ERROR
+ 150510.5 05:23:20.278 AUDIO_CHUNK_SENT
+ 151382.3 05:23:21.150 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="You failed to answer this"
+ 151382.4 05:23:21.150 TRANSCRIPT_SENT_TO_UI turnId="turn_016" transcript="You failed to answer this"
+ 151382.7 05:23:21.150 SEMANTIC_CHANGE turnId="turn_016" questionState="WAITING_FOR_MORE" reason="content_expanded"
+ 151382.9 05:23:21.150 TURN_ARCHIVED turnId="turn_017" questionState="WAITING_FOR_MORE"
+ 151383.1 05:23:21.150 TURN_STARTED turnId="turn_017" questionState="WAITING_FOR_MORE" reason="new_utterance"
+ 151383.2 05:23:21.150 TRANSCRIPT_BUFFER_UPDATED turnId="turn_017" questionState="WAITING_FOR_MORE"
+ 151383.3 05:23:21.151 TRANSCRIPT_INTERIM turnId="turn_017" questionState="WAITING_FOR_MORE" transcript="You failed to answer this"
+ 151383.3 05:23:21.151 PERFORMANCE_MARK turnId="turn_017"
+ 151383.6 05:23:21.151 DEEPGRAM_ERROR
+ 152285.5 05:23:22.053 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="You failed to answer this also."
+ 152285.8 05:23:22.053 TRANSCRIPT_SENT_TO_UI turnId="turn_017" transcript="You failed to answer this also."
+ 152286.4 05:23:22.054 SEMANTIC_CHANGE turnId="turn_017" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+ 152286.6 05:23:22.054 TRANSCRIPT_BUFFER_UPDATED turnId="turn_017" questionState="WAITING_FOR_MORE"
+ 152286.6 05:23:22.054 TRANSCRIPT_FINAL turnId="turn_017" questionState="WAITING_FOR_MORE" transcript="You failed to answer this also."
+ 152286.9 05:23:22.054 QUESTION_STATE_CHANGED turnId="turn_017" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+ 152287.6 05:23:22.055 DEEPGRAM_ERROR
+ 152608.5 05:23:22.376 AUDIO_CHUNK_SENT
+ 152867.6 05:23:22.635 PERFORMANCE_MARK turnId="turn_017"
+ 153181.4 05:23:22.949 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Now"
+ 153181.4 05:23:22.949 TRANSCRIPT_SENT_TO_UI turnId="turn_017" transcript="Now"
+ 153181.8 05:23:22.949 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_017" transcript="Now"
+ 154090.9 05:23:23.858 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Now moving to question number three."
+ 154091.2 05:23:23.859 TRANSCRIPT_SENT_TO_UI turnId="turn_017" transcript="Now moving to question number three."
+ 154091.6 05:23:23.859 SEMANTIC_CHANGE turnId="turn_017" questionState="QUESTION_BUILDING" reason="question_type_flip"
+ 154091.9 05:23:23.859 TURN_ARCHIVED turnId="turn_018" questionState="QUESTION_BUILDING"
+ 154092.1 05:23:23.859 TURN_STARTED turnId="turn_018" questionState="QUESTION_BUILDING" reason="new_utterance"
+ 154092.1 05:23:23.859 TRANSCRIPT_BUFFER_UPDATED turnId="turn_018" questionState="QUESTION_BUILDING"
+ 154092.1 05:23:23.859 TRANSCRIPT_INTERIM turnId="turn_018" questionState="QUESTION_BUILDING" transcript="Now moving to question number three."
+ 154092.2 05:23:23.860 PERFORMANCE_MARK turnId="turn_018"
+ 154092.4 05:23:23.860 QUESTION_STATE_CHANGED turnId="turn_018" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+ 154092.7 05:23:23.860 DEEPGRAM_ERROR
+ 154687.8 05:23:24.455 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Now moving to question number three."
+ 154687.9 05:23:24.455 TRANSCRIPT_SENT_TO_UI turnId="turn_018" transcript="Now moving to question number three."
+ 154688.1 05:23:24.455 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_018" transcript="Now moving to question number three."
+ 154688.3 05:23:24.456 SPEECH_FINAL turnId="turn_018" questionState="SPEECH_ACTIVE" transcript="Now moving to question number three."
+ 154688.5 05:23:24.456 BOUNDARY_DECISION turnId="turn_018" questionState="SPEECH_ACTIVE" decision="WAIT_FOR_MORE" reason="not_a_question" transcript="Now moving to question number three."
+ 154688.9 05:23:24.456 QUESTION_STATE_CHANGED turnId="turn_018" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+ 154689.3 05:23:24.457 DEEPGRAM_ERROR
+ 154708.3 05:23:24.476 AUDIO_CHUNK_SENT
+   155264 05:23:25.031 PERFORMANCE_MARK turnId="turn_018"
+ 156789.7 05:23:26.557 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="How would you process"
+ 156790.1 05:23:26.557 TRANSCRIPT_SENT_TO_UI turnId="turn_018" transcript="How would you process"
+ 156790.4 05:23:26.558 SEMANTIC_CHANGE turnId="turn_018" questionState="WAITING_FOR_MORE" reason="domain_term_added"
+ 156790.6 05:23:26.558 TURN_ARCHIVED turnId="turn_019" questionState="WAITING_FOR_MORE"
+ 156790.7 05:23:26.558 TURN_STARTED turnId="turn_019" questionState="WAITING_FOR_MORE" reason="new_utterance"
+ 156790.8 05:23:26.558 TRANSCRIPT_BUFFER_UPDATED turnId="turn_019" questionState="WAITING_FOR_MORE"
+ 156790.8 05:23:26.558 TRANSCRIPT_INTERIM turnId="turn_019" questionState="WAITING_FOR_MORE" transcript="How would you process"
+ 156790.8 05:23:26.558 PERFORMANCE_MARK turnId="turn_019"
+ 156791.1 05:23:26.558 QUESTION_STATE_CHANGED turnId="turn_019" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+ 156791.7 05:23:26.559 DEEPGRAM_ERROR
+ 156808.9 05:23:26.576 AUDIO_CHUNK_SENT
+ 157690.5 05:23:27.458 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="How would you process 1,000,000 records"
+ 157690.7 05:23:27.458 TRANSCRIPT_SENT_TO_UI turnId="turn_019" transcript="How would you process 1,000,000 records"
+ 157690.9 05:23:27.458 SEMANTIC_CHANGE turnId="turn_019" questionState="QUESTION_BUILDING" reason="content_expanded"
+   157691 05:23:27.458 TRANSCRIPT_BUFFER_UPDATED turnId="turn_019" questionState="QUESTION_BUILDING"
+ 157691.1 05:23:27.458 TRANSCRIPT_INTERIM turnId="turn_019" questionState="QUESTION_BUILDING" transcript="How would you process 1,000,000 records"
+ 157691.2 05:23:27.458 PERFORMANCE_MARK turnId="turn_019"
+ 157691.6 05:23:27.459 DEEPGRAM_ERROR
+ 158590.2 05:23:28.358 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="How would you process 1,000,000 records through SFT"
+ 158590.3 05:23:28.358 TRANSCRIPT_SENT_TO_UI turnId="turn_019" transcript="How would you process 1,000,000 records through SFT"
+ 158590.8 05:23:28.358 SEMANTIC_CHANGE turnId="turn_019" questionState="QUESTION_BUILDING" reason="content_expanded"
+ 158590.9 05:23:28.358 TRANSCRIPT_BUFFER_UPDATED turnId="turn_019" questionState="QUESTION_BUILDING"
+ 158590.9 05:23:28.358 TRANSCRIPT_INTERIM turnId="turn_019" questionState="QUESTION_BUILDING" transcript="How would you process 1,000,000 records through SFT"
+   158591 05:23:28.358 PERFORMANCE_MARK turnId="turn_019"
+ 158591.4 05:23:28.359 DEEPGRAM_ERROR
+ 158908.4 05:23:28.676 AUDIO_CHUNK_SENT
+ 159490.8 05:23:29.258 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="How would you process 1,000,000 records through SFTP?"
+ 159490.9 05:23:29.258 TRANSCRIPT_SENT_TO_UI turnId="turn_019" transcript="How would you process 1,000,000 records through SFTP?"
+ 159491.4 05:23:29.259 SEMANTIC_CHANGE turnId="turn_019" questionState="QUESTION_BUILDING" reason="question_mark_added"
+ 159491.5 05:23:29.259 TRANSCRIPT_BUFFER_UPDATED turnId="turn_019" questionState="QUESTION_BUILDING"
+ 159491.6 05:23:29.259 TRANSCRIPT_INTERIM turnId="turn_019" questionState="QUESTION_BUILDING" transcript="How would you process 1,000,000 records through SFTP?"
+ 159491.7 05:23:29.259 PERFORMANCE_MARK turnId="turn_019"
+ 159492.1 05:23:29.259 DEEPGRAM_ERROR
+ 159764.9 05:23:29.532 PERFORMANCE_MARK turnId="turn_019"
+   159792 05:23:29.559 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="How would you process 1,000,000 records through SFTP?"
+   159792 05:23:29.559 TRANSCRIPT_SENT_TO_UI turnId="turn_019" transcript="How would you process 1,000,000 records through SFTP?"
+ 159792.3 05:23:29.560 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_019" transcript="How would you process 1,000,000 records through SFTP?"
+ 160384.4 05:23:30.152 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Connectors"
+ 160384.5 05:23:30.152 TRANSCRIPT_SENT_TO_UI turnId="turn_019" transcript="Connectors"
+ 160384.8 05:23:30.152 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_019" transcript="Connectors"
+ 161009.7 05:23:30.777 AUDIO_CHUNK_SENT
+ 161286.4 05:23:31.054 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Connectors without running"
+ 161286.6 05:23:31.054 TRANSCRIPT_SENT_TO_UI turnId="turn_019" transcript="Connectors without running"
+ 161287.1 05:23:31.054 SEMANTIC_CHANGE turnId="turn_019" questionState="QUESTION_BUILDING" reason="domain_term_added"
+ 161287.5 05:23:31.055 TURN_ARCHIVED turnId="turn_020" questionState="QUESTION_BUILDING"
+ 161287.7 05:23:31.055 TURN_STARTED turnId="turn_020" questionState="QUESTION_BUILDING" reason="new_utterance"
+ 161287.8 05:23:31.055 TRANSCRIPT_BUFFER_UPDATED turnId="turn_020" questionState="QUESTION_BUILDING"
+ 161287.8 05:23:31.055 TRANSCRIPT_INTERIM turnId="turn_020" questionState="QUESTION_BUILDING" transcript="Connectors without running"
+ 161287.9 05:23:31.055 PERFORMANCE_MARK turnId="turn_020"
+ 161288.2 05:23:31.055 QUESTION_STATE_CHANGED turnId="turn_020" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+ 161288.6 05:23:31.056 DEEPGRAM_ERROR
+ 161586.4 05:23:31.354 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Connectors without running"
+ 161586.9 05:23:31.354 TRANSCRIPT_SENT_TO_UI turnId="turn_020" transcript="Connectors without running"
+ 161587.2 05:23:31.355 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_020" transcript="Connectors without running"
+ 161587.4 05:23:31.355 SPEECH_FINAL turnId="turn_020" questionState="SPEECH_ACTIVE" transcript="Connectors without running"
+ 161587.7 05:23:31.355 BOUNDARY_DECISION turnId="turn_020" questionState="SPEECH_ACTIVE" decision="WAIT_FOR_MORE" reason="not_a_question" transcript="Connectors without running"
+   161588 05:23:31.355 QUESTION_STATE_CHANGED turnId="turn_020" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+ 161588.6 05:23:31.356 DEEPGRAM_ERROR
+ 162466.8 05:23:32.234 PERFORMANCE_MARK turnId="turn_020"
+ 162780.2 05:23:32.548 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="out"
+ 162780.5 05:23:32.548 TRANSCRIPT_SENT_TO_UI turnId="turn_020" transcript="out"
+ 162780.8 05:23:32.548 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_020" transcript="out"
+ 163107.7 05:23:32.875 AUDIO_CHUNK_SENT
+ 163685.6 05:23:33.453 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="off"
+ 163685.7 05:23:33.453 TRANSCRIPT_SENT_TO_UI turnId="turn_020" transcript="off"
+ 163686.1 05:23:33.453 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_020" transcript="off"
+ 164588.6 05:23:34.356 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="off, out of,"
+ 164588.9 05:23:34.356 TRANSCRIPT_SENT_TO_UI turnId="turn_020" transcript="off, out of,"
+ 164589.3 05:23:34.357 SEMANTIC_CHANGE turnId="turn_020" questionState="WAITING_FOR_MORE" reason="content_expanded"
+ 164589.8 05:23:34.357 TURN_ARCHIVED turnId="turn_021" questionState="WAITING_FOR_MORE"
+ 164589.9 05:23:34.357 TURN_STARTED turnId="turn_021" questionState="WAITING_FOR_MORE" reason="new_utterance"
+ 164589.9 05:23:34.357 TRANSCRIPT_BUFFER_UPDATED turnId="turn_021" questionState="WAITING_FOR_MORE"
+ 164589.9 05:23:34.357 TRANSCRIPT_INTERIM turnId="turn_021" questionState="WAITING_FOR_MORE" transcript="off, out of,"
+   164590 05:23:34.357 PERFORMANCE_MARK turnId="turn_021"
+ 164590.3 05:23:34.358 DEEPGRAM_ERROR
+ 165208.1 05:23:34.975 AUDIO_CHUNK_SENT
+ 165791.9 05:23:35.559 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="of out of atom memory."
+   165792 05:23:35.559 TRANSCRIPT_SENT_TO_UI turnId="turn_021" transcript="of out of atom memory."
+ 165792.3 05:23:35.560 SEMANTIC_CHANGE turnId="turn_021" questionState="WAITING_FOR_MORE" reason="domain_term_added"
+ 165792.5 05:23:35.560 TURN_ARCHIVED turnId="turn_022" questionState="WAITING_FOR_MORE"
+ 165792.7 05:23:35.560 TURN_STARTED turnId="turn_022" questionState="WAITING_FOR_MORE" reason="new_utterance"
+ 165792.7 05:23:35.560 TRANSCRIPT_BUFFER_UPDATED turnId="turn_022" questionState="WAITING_FOR_MORE"
+ 165792.8 05:23:35.560 TRANSCRIPT_INTERIM turnId="turn_022" questionState="WAITING_FOR_MORE" transcript="of out of atom memory."
+ 165792.8 05:23:35.560 PERFORMANCE_MARK turnId="turn_022"
+ 165793.2 05:23:35.561 QUESTION_STATE_CHANGED turnId="turn_022" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+ 165793.9 05:23:35.561 DEEPGRAM_ERROR
+ 165801.2 05:23:35.569 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="of out of ATOM memory."
+ 165801.3 05:23:35.569 TRANSCRIPT_SENT_TO_UI turnId="turn_022" transcript="of out of ATOM memory."
+ 165802.1 05:23:35.569 DEEPGRAM_ERROR
+ 166392.5 05:23:36.160 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="of out of ATOM memory."
+ 166392.6 05:23:36.160 TRANSCRIPT_SENT_TO_UI turnId="turn_022" transcript="of out of ATOM memory."
+ 166392.8 05:23:36.160 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_022" transcript="of out of ATOM memory."
+ 166691.1 05:23:36.458 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="of out of ATOM memory."
+ 166691.2 05:23:36.458 TRANSCRIPT_SENT_TO_UI turnId="turn_022" transcript="of out of ATOM memory."
+ 166691.3 05:23:36.459 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_022" transcript="of out of ATOM memory."
+ 167308.8 05:23:37.076 AUDIO_CHUNK_SENT
+   169409 05:23:39.176 AUDIO_CHUNK_SENT
+ 171508.2 05:23:41.275 AUDIO_CHUNK_SENT
+ 173608.6 05:23:43.376 AUDIO_CHUNK_SENT
+ 175708.4 05:23:45.476 AUDIO_CHUNK_SENT
+ 177808.3 05:23:47.576 AUDIO_CHUNK_SENT
+ 179908.3 05:23:49.675 AUDIO_CHUNK_SENT
+ 180466.5 05:23:50.233 PERFORMANCE_MARK turnId="turn_022"
+ 180634.8 05:23:50.402 QUESTION_STATE_CHANGED turnId="turn_022" questionState="ANSWERING" reason="regenerate_requested"
+ 181367.6 05:23:51.135 QUESTION_STATE_CHANGED turnId="turn_022" questionState="ANSWER_READY" reason="regenerate_complete"
+ 181371.2 05:23:51.138 ERROR turnId="turn_022" questionState="ANSWER_READY"
+ 182008.4 05:23:51.775 AUDIO_CHUNK_SENT
+ 184107.8 05:23:53.875 AUDIO_CHUNK_SENT
+ 186208.3 05:23:55.975 AUDIO_CHUNK_SENT
+   187365 05:23:57.132 PERFORMANCE_MARK turnId="turn_022"
+ 187676.2 05:23:57.443 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="And"
+ 187676.3 05:23:57.443 TRANSCRIPT_SENT_TO_UI turnId="turn_022" transcript="And"
+ 187676.5 05:23:57.443 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_022" transcript="And"
+   188308 05:23:58.075 AUDIO_CHUNK_SENT
+ 188585.6 05:23:58.352 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="And question number five,"
+ 188585.7 05:23:58.353 TRANSCRIPT_SENT_TO_UI turnId="turn_022" transcript="And question number five,"
+ 188586.1 05:23:58.353 SEMANTIC_CHANGE turnId="turn_022" questionState="ANSWER_READY" reason="content_expanded"
+ 188586.4 05:23:58.353 TURN_ARCHIVED turnId="turn_023" questionState="ANSWER_READY"
+ 188586.5 05:23:58.353 TURN_STARTED turnId="turn_023" questionState="ANSWER_READY" reason="new_utterance"
+ 188586.6 05:23:58.353 TRANSCRIPT_BUFFER_UPDATED turnId="turn_023" questionState="ANSWER_READY"
+ 188586.6 05:23:58.354 TRANSCRIPT_INTERIM turnId="turn_023" questionState="ANSWER_READY" transcript="And question number five,"
+ 188586.8 05:23:58.354 PERFORMANCE_MARK turnId="turn_023"
+ 188586.9 05:23:58.354 QUESTION_STATE_CHANGED turnId="turn_023" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+ 188587.3 05:23:58.354 DEEPGRAM_ERROR
+ 189183.4 05:23:58.950 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="And question number five."
+ 189183.5 05:23:58.950 TRANSCRIPT_SENT_TO_UI turnId="turn_023" transcript="And question number five."
+ 189183.9 05:23:58.951 TRANSCRIPT_INTERIM turnId="turn_023" questionState="SPEECH_ACTIVE" transcript="And question number five."
+ 189183.9 05:23:58.951 PERFORMANCE_MARK turnId="turn_023"
+ 189184.2 05:23:58.951 DEEPGRAM_ERROR
+ 189481.7 05:23:59.249 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="And question number five."
+   189482 05:23:59.249 TRANSCRIPT_SENT_TO_UI turnId="turn_023" transcript="And question number five."
+ 189482.2 05:23:59.249 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_023" transcript="And question number five."
+ 189785.4 05:23:59.552 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="And question number five."
+ 189785.5 05:23:59.552 TRANSCRIPT_SENT_TO_UI turnId="turn_023" transcript="And question number five."
+ 189785.7 05:23:59.553 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_023" transcript="And question number five."
+ 189786.1 05:23:59.553 SPEECH_FINAL turnId="turn_023" questionState="SPEECH_ACTIVE" transcript="And question number five."
+ 189786.3 05:23:59.553 BOUNDARY_DECISION turnId="turn_023" questionState="SPEECH_ACTIVE" decision="WAIT_FOR_MORE" reason="not_a_question" transcript="And question number five."
+ 189786.5 05:23:59.553 QUESTION_STATE_CHANGED turnId="turn_023" questionState="WAITING_FOR_MORE" reason="question_incomplete"
+   189787 05:23:59.554 DEEPGRAM_ERROR
+ 190408.2 05:24:00.175 AUDIO_CHUNK_SENT
+ 190965.8 05:24:00.733 PERFORMANCE_MARK turnId="turn_023"
+ 190982.3 05:24:00.749 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="He"
+ 190982.4 05:24:00.749 TRANSCRIPT_SENT_TO_UI turnId="turn_023" transcript="He"
+ 190982.5 05:24:00.749 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_023" transcript="He"
+ 191884.9 05:24:01.652 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Have you ever in"
+   191885 05:24:01.652 TRANSCRIPT_SENT_TO_UI turnId="turn_023" transcript="Have you ever in"
+ 191885.4 05:24:01.652 SEMANTIC_CHANGE turnId="turn_023" questionState="WAITING_FOR_MORE" reason="content_expanded"
+ 191885.6 05:24:01.653 TURN_ARCHIVED turnId="turn_024" questionState="WAITING_FOR_MORE"
+ 191885.8 05:24:01.653 TURN_STARTED turnId="turn_024" questionState="WAITING_FOR_MORE" reason="new_utterance"
+ 191885.9 05:24:01.653 TRANSCRIPT_BUFFER_UPDATED turnId="turn_024" questionState="WAITING_FOR_MORE"
+ 191885.9 05:24:01.653 TRANSCRIPT_INTERIM turnId="turn_024" questionState="WAITING_FOR_MORE" transcript="Have you ever in"
+ 191885.9 05:24:01.653 PERFORMANCE_MARK turnId="turn_024"
+ 191886.3 05:24:01.653 DEEPGRAM_ERROR
+ 192507.9 05:24:02.275 AUDIO_CHUNK_SENT
+ 192784.2 05:24:02.551 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Have you ever implemented any"
+ 192784.3 05:24:02.551 TRANSCRIPT_SENT_TO_UI turnId="turn_024" transcript="Have you ever implemented any"
+ 192784.7 05:24:02.552 SEMANTIC_CHANGE turnId="turn_024" questionState="WAITING_FOR_MORE" reason="question_type_flip"
+ 192784.7 05:24:02.552 TRANSCRIPT_BUFFER_UPDATED turnId="turn_024" questionState="WAITING_FOR_MORE"
+ 192784.8 05:24:02.552 TRANSCRIPT_INTERIM turnId="turn_024" questionState="WAITING_FOR_MORE" transcript="Have you ever implemented any"
+ 192784.9 05:24:02.552 PERFORMANCE_MARK turnId="turn_024"
+ 192785.1 05:24:02.552 QUESTION_STATE_CHANGED turnId="turn_024" questionState="QUESTION_BUILDING" reason="new_meaningful_transcript"
+ 192785.6 05:24:02.553 DEEPGRAM_ERROR
+ 193985.8 05:24:03.753 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Have you ever implemented enrollment extensions"
+   193986 05:24:03.753 TRANSCRIPT_SENT_TO_UI turnId="turn_024" transcript="Have you ever implemented enrollment extensions"
+ 193986.4 05:24:03.753 SEMANTIC_CHANGE turnId="turn_024" questionState="QUESTION_BUILDING" reason="content_expanded"
+ 193986.6 05:24:03.753 TRANSCRIPT_BUFFER_UPDATED turnId="turn_024" questionState="QUESTION_BUILDING"
+ 193986.7 05:24:03.754 TRANSCRIPT_INTERIM turnId="turn_024" questionState="QUESTION_BUILDING" transcript="Have you ever implemented enrollment extensions"
+ 193986.7 05:24:03.754 PERFORMANCE_MARK turnId="turn_024"
+ 193987.3 05:24:03.754 DEEPGRAM_ERROR
+ 194609.2 05:24:04.376 AUDIO_CHUNK_SENT
+ 194866.1 05:24:04.633 PERFORMANCE_MARK turnId="turn_024"
+ 194888.3 05:24:04.655 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="Have you ever implemented enrollment"
+ 194888.3 05:24:04.655 TRANSCRIPT_SENT_TO_UI turnId="turn_024" transcript="Have you ever implemented enrollment"
+   194889 05:24:04.656 DEEPGRAM_ERROR
+ 194891.3 05:24:04.658 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="extensions and process properties"
+ 194891.4 05:24:04.658 TRANSCRIPT_SENT_TO_UI turnId="turn_024" transcript="extensions and process properties"
+ 194891.8 05:24:04.659 SEMANTIC_CHANGE turnId="turn_024" questionState="QUESTION_BUILDING" reason="domain_term_added"
+ 194891.9 05:24:04.659 TURN_ARCHIVED turnId="turn_025" questionState="QUESTION_BUILDING"
+   194892 05:24:04.659 TURN_STARTED turnId="turn_025" questionState="QUESTION_BUILDING" reason="new_utterance"
+   194892 05:24:04.659 TRANSCRIPT_BUFFER_UPDATED turnId="turn_025" questionState="QUESTION_BUILDING"
+ 194892.1 05:24:04.659 TRANSCRIPT_INTERIM turnId="turn_025" questionState="QUESTION_BUILDING" transcript="extensions and process properties"
+ 194892.1 05:24:04.659 PERFORMANCE_MARK turnId="turn_025"
+ 194892.3 05:24:04.659 QUESTION_STATE_CHANGED turnId="turn_025" questionState="SPEECH_ACTIVE" reason="speech_not_question"
+ 194892.6 05:24:04.659 DEEPGRAM_ERROR
+ 195786.7 05:24:05.554 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="extensions and process properties in your project?"
+ 195786.9 05:24:05.554 TRANSCRIPT_SENT_TO_UI turnId="turn_025" transcript="extensions and process properties in your project?"
+ 195787.2 05:24:05.554 SEMANTIC_CHANGE turnId="turn_025" questionState="SPEECH_ACTIVE" reason="question_type_flip"
+ 195787.2 05:24:05.554 TRANSCRIPT_BUFFER_UPDATED turnId="turn_025" questionState="SPEECH_ACTIVE"
+ 195787.3 05:24:05.554 TRANSCRIPT_INTERIM turnId="turn_025" questionState="SPEECH_ACTIVE" transcript="extensions and process properties in your project?"
+ 195787.3 05:24:05.554 PERFORMANCE_MARK turnId="turn_025"
+ 195787.6 05:24:05.554 DEEPGRAM_ERROR
+ 196383.5 05:24:06.150 TRANSCRIPT_RECEIVED_FROM_DEEPGRAM transcript="extensions and process properties in your project?"
+ 196383.7 05:24:06.151 TRANSCRIPT_SENT_TO_UI turnId="turn_025" transcript="extensions and process properties in your project?"
+ 196383.8 05:24:06.151 TRANSCRIPT_SENT_TO_ENGINE turnId="turn_025" transcript="extensions and process properties in your project?"
+   196384 05:24:06.151 SPEECH_FINAL turnId="turn_025" questionState="SPEECH_ACTIVE" transcript="extensions and process properties in your project?"
+ 196384.2 05:24:06.151 BOUNDARY_DECISION turnId="turn_025" questionState="SPEECH_ACTIVE" decision="CONTINUE" reason="question_mark_soft" transcript="extensions and process properties in your project?"
+ 196385.1 52 QUESTION_SNAPSHOT_CREATED turnId="turn_025" questionState="QUESTION_BOUNDARY_LIKELY" decision="soft" transcript="extensions and process properties in your project?"
+ 196385.3 05:24:06.152 PERFORMANCE_MARK turnId="turn_025"
+ 196385.4 05:24:06.152 PERFORMANCE_MARK turnId="turn_025"
+ 196386.5 05:24:06.153 QUESTION_STATE_CHANGED turnId="turn_025" questionState="ANSWERING" reason="final_answer_started"
+ 196708.1 05:24:06.475 AUDIO_CHUNK_SENT
+ 197189.3 05:24:06.956 QUESTION_STATE_CHANGED turnId="turn_025" questionState="ANSWER_READY" reason="answer_complete"
+ 197189.7 05:24:06.957 TURN_COMPLETED turnId="turn_025" questionState="ANSWER_READY" transcript="extensions and process properties in your project?"
+ 197192.3 05:24:06.959 ERROR turnId="turn_025" questionState="ANSWER_READY"
+ 197192.4 05:24:06.959 QUESTION_STATE_CHANGED turnId="turn_025" questionState="ERROR" reason="api_error"
+ 198808.9 05:24:08.576 AUDIO_CHUNK_SENT
+   200910 05:24:10.677 AUDIO_CHUNK_SENT
+ 203008.1 05:24:12.775 AUDIO_CHUNK_SENT
+ 205108.1 05:24:14.875 AUDIO_CHUNK_SENT
+ 205966.4 05:24:15.733 PERFORMANCE_MARK turnId="turn_025"
+ 207208.1 05:24:16.975 AUDIO_CHUNK_SENT
+ 207776.9 05:24:17.544 SPEECH_FINAL turnId="turn_025" questionState="ERROR" transcript="extensions and process properties in your project?"
+ 209013.9 05:24:18.781 PERFORMANCE_MARK turnId="turn_025"
+ 209308.1 05:24:19.075 AUDIO_CHUNK_SENT
+ 209914.3 05:24:19.681 SPEECH_FINAL turnId="turn_025" questionState="ERROR" transcript="extensions and process properties in your project?"
+ 211407.7 05:24:21.175 AUDIO_CHUNK_SENT
+ 213507.9 05:24:23.275 AUDIO_CHUNK_SENT
+ 215608.5 05:24:25.375 AUDIO_CHUNK_SENT
+ 217707.7 05:24:27.475 AUDIO_CHUNK_SENT
+ 219807.4 05:24:29.574 AUDIO_CHUNK_SENT
+ 221908.3 05:24:31.675 AUDIO_CHUNK_SENT
+   224008 05:24:33.775 AUDIO_CHUNK_SENT
+ 226108.1 05:24:35.875 AUDIO_CHUNK_SENT
+ 228209.6 05:24:37.977 AUDIO_CHUNK_SENT
+ 230308.5 05:24:40.075 AUDIO_CHUNK_SENT
+   232189 05:24:41.956 SESSION_ENDED reason="app_shutdown"
+ 232189.1 05:24:41.956 SESSION_SUMMARY

@@ -2,26 +2,32 @@
 
 These shortcuts work globally across your entire operating system as long as the Boomi Companion application is running in the background.
 
-## 🎙️ Audio & Transcription Controls
-*   **`Alt + S`** : **Pause / Resume Listening.** Temporarily stops the engine from processing new speech (useful if you or someone else in the room is talking and you don't want the AI to process it).
-*   **`Alt + C`** : **Clear Screen.** Instantly wipes the current question, transcript, and answer from the UI, giving you a clean slate for the next question.
-*   **`Alt + V`** : **Toggle Candidate Microphone Analysis (ON / OFF).** Phase 10 — flips the `candidateAnalysisEnabled` master lock and the MIC badge (red `MIC: OFF` ↔ green `MIC: ON`). While ON, your spoken answer is transcribed into the engine's `candidateTranscript` buffer for grading. Default OFF.
-*   **`Alt + A`** : **Analyze Candidate Spoken Answer.** Phase 10 Part 2 — grades the candidate's spoken answer against the expected (last suggested) answer via Groq and shows the scorecard (`Score: X/10` + feedback) under the teleprompter for 8 seconds.
+> **Window restore:** pressing any global shortcut while the app is minimized or
+> hidden automatically restores and focuses the overlay before the action runs,
+> so a hotkey always brings the teleprompter right back onto the screen.
 
-## 🤖 AI Output Controls
-*   **`Alt + M`** : **Toggle Output Mode (Script / Architect).** 
-    *   *Script Mode:* Full, natural conversational sentences (first-person).
-    *   *Architect Mode:* Ultra-fast, punchy bullet points and structural flows using arrows (`->`).
-*   **`Alt + R`** : **Regenerate Answer.** Forces Groq to rethink and generate a new final answer based on the current question snapshot.
+## ✅ Registered Global Shortcuts (main.js)
 
-## 🪟 Window & Stealth Controls
-*   **`Alt + Z`** : **Toggle Click-Through.** 
-    *   *ON:* The window becomes a pure overlay. Mouse clicks pass directly through it into the application behind it (like your browser or IDE).
-    *   *OFF:* The window can be clicked, dragged, and interacted with.
-*   **`Alt + P`** : **Panic Mode (Stealth Hide).** Instantly drops the overlay's opacity to 0% making it completely invisible on your monitor, while keeping the audio and WebSocket connections running perfectly in the background. Press again to unhide.
-*   **`Alt + X`** : **Toggle Window Size.** Expands or collapses the vertical height of the teleprompter window to read longer answers.
+| Shortcut | Action |
+| --- | --- |
+| `Alt + S` | **Pause / Resume Listening.** Temporarily stops the engine from processing new speech. |
+| `Alt + C` | **Clear Screen.** Wipes the current question, transcript, and answer from the UI. |
+| `Alt + R` | **Regenerate Answer.** Forces a new final answer based on the current question snapshot. |
+| `Alt + M` | **Toggle Output Mode (Script / Architect).** Script = natural sentences; Architect = punchy bullets with `->` flow. |
+| `Alt + X` | **Toggle Window Size.** Expands / collapses the teleprompter height for longer answers. |
+| `Alt + Z` | **Toggle Click-Through.** ON = mouse passes through the overlay; OFF = interactive. |
+| `Alt + H` | **Toggle Shortcuts Panel.** Slides the hotkey reference panel in/out (auto-closes after 8s). |
+| `Alt + P` | **Toggle Panic Mode (Near 0% Opacity).** Instantly drops the overlay to ~3% opacity and ignores all clicks (Stealth Hide). Audio/WebSocket keep running. Press again to unhide. This key does NOT restore a minimized window — it is meant for hiding the app. |
 
-## 🎛️ Stealth Pro HUD Drawers (Update 1)
-*   **`Alt + H`** : **Toggle Shortcuts Drawer.** Slides in/out the hotkey reference panel (top-right). Auto-closes after 8 seconds of mouse inactivity.
-*   **`Alt + O`** : **Toggle Settings Drawer.** Slides in/out the settings panel with Window Opacity (30–100%) and Font Size (14–28px) sliders. Auto-closes after 8 seconds of mouse inactivity.
-*   **Freeform Resize:** invisible drag handles on the right edge, bottom edge, and bottom-right corner let you resize the teleprompter freely (min 400×100).
+## ⚠️ Not Wired to a Global Shortcut
+
+These features exist in the UI as **buttons only** — they are NOT registered as
+global shortcuts, so keyboard users must click the on-screen button instead:
+
+*   **Candidate Mic (`toggle-mic`)** — `🎤` button in the floating pill.
+*   **Analyze Candidate Answer (`analyze-candidate`)** — scorecard button.
+*   **Settings Drawer (`toggle-settings`)** — gear button / "View Keyboard Shortcuts" link.
+
+*Historical: `Alt + V` was previously documented but never registered in
+`main.js`; it has been removed from this list. The actual pause/play toggle is
+`Alt + S`, and Panic Hide is now the real `Alt + P` shortcut above.*

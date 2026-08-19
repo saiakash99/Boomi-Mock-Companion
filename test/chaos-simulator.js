@@ -171,6 +171,12 @@ function makeChaosEngine(timer, network) {
     answerCall: network.answerCall,
     scenarioBank: loadRealBank(),
     openersEnabled: false,
+    // Sniper Mode opt-out (documented escape hatch): the chaos harness feeds
+    // INCREMENTAL multi-chunk transcripts and asserts on interim-driven draft
+    // aborts + mid-stream local scenario intercepts — behavior the strict
+    // sniper mode (exactly 1 API call per question) removes by design. Opt out
+    // so the resilience scenarios exercise the speculative pipeline they model.
+    cfg: { sniperMode: false },
     diag: (evt, data) => {
       if (evt === 'ANSWER_DELIVERED') {
         events.deliveries.push({ source: data.source, at: timer.getNow() });

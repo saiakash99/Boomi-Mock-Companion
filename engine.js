@@ -25,6 +25,9 @@
 //    speech boundary when the question is complete (no 2nd call)
 //  - Final natural-answer generation with adaptive length
 //  - Stale-response protection (monotonic request IDs + supersede)
+//  - Keyword-Stall Glossary: instant term->definition scan on live interim
+//    transcripts (boomi-glossary.json) so the UI flashes a definition while
+//    the interviewer is still speaking (replaced by the cloud answer)
 //  - clear / pause / resume / regenerate consistency
 //  - Conversation turn IDs (turn_001 ...) + follow-up context window
 //  - Latency / event logging (no secrets ever logged here)
@@ -81,6 +84,19 @@ const DEFAULT_CFG = Object.freeze({
   // completely bypassing the cloud/ProviderRouter rate limits. Configurable via
   // cfg.ragFirstThreshold (default 0.85 = 85%).
   ragFirstThreshold: 0.85,
+  // Fix A — Strict Sniper Mode. Default ON. When true:
+  //  1) Interim transcript frames (isFinal=false) are ISOLATED: they go ONLY
+  //     to the keyword-stall scanner (checkInterimForKeywords) for the local
+  //     UI stall card and return early — RAG / Groq / Gemini routing logic is
+  //     NEVER executed mid-speech.
+  //  2) The speculative fast-path + draft calls (the token-burn micro-drafting
+  //     that tripped Groq 30 RPM / Gemini 15 RPM) are disabled entirely.
+  //  3) Exactly ONE API request fires per completed question, at the strictly
+  //     finalized boundary (isFinal + speechFinal + complete semantic/pause
+  //     check -> _onBoundary finalize). 'soft' boundaries defer.
+  // Set cfg.sniperMode=false to restore the old speculative pipeline (tests
+  // that assert on interim-driven drafting opt out explicitly).
+  sniperMode: true,
   fastDebounceMs: 300,
   fastMinIntervalMs: 4000,
   draftDebounceMs: 200,
@@ -126,20 +142,21 @@ const DOMAIN_KB = {
 const RAG_ONLY_FALLBACK = "I focus on Boomi integration architecture. Could you clarify your question?";
 
 // ------------------------------------------------------------
-// Update 3 — Deterministic, context-aware openers. A single canonical
-// opener per question type (no randomness) so the candidate always hears
-// the same crisp, confident first line for a given class of question.
+// Update — Varied, randomized conversational openers. Each question type has an
+// array of 4-5 equivalent openers (including one empty string so the opener is
+// sometimes skipped entirely). _pickOpener() selects one at random per response
+// and a "\n" is appended after it so the real answer starts on a fresh line.
 // ------------------------------------------------------------
 const SAFE_OPENERS = {
-  conceptual: "The simplest way to look at that is",
-  experience: "In my project, I handled that by",
-  project: "In my project, I handled that by",
-  scenario: "From an architecture perspective, I would",
-  troubleshooting: "The first thing I would check is",
-  comparison: "The main difference is",
-  'best-practice': "The recommended best practice is",
-  followup: "To expand on that,",
-  fallback: "My understanding is"
+  conceptual: ['The simplest way to look at that is', 'At a high level,', 'The core idea is that', 'In simple terms,', ''],
+  experience: ['In my project, I handled that by', 'From my own experience,', 'In practice, I', 'I have done that by', ''],
+  project: ['In my project, I handled that by', 'From my own experience,', 'In practice, I', 'I have done that by', ''],
+  scenario: ['From an architecture perspective, I would', 'If I were designing this, I would', 'Approaching this scenario,', 'Architecturally, I would', ''],
+  troubleshooting: ['The first thing I would check is', 'My initial step would be', 'Starting with the most likely cause,', 'I would first look at', ''],
+  comparison: ['The main difference is', 'Comparing the two,', 'The key distinction is', 'They differ mainly in', ''],
+  'best-practice': ['The recommended best practice is', 'The standard approach is', 'Best practice here is to', 'The conventional way is', ''],
+  followup: ['To expand on that,', 'Building on that,', 'Going a step further,', 'Adding to that,', ''],
+  fallback: ['My understanding is', 'Based on my knowledge,', 'As I understand it,', 'From what I know,', '']
 };
 
 // ------------------------------------------------------------
@@ -224,7 +241,15 @@ const FIRST_WORD_STARTERS = new Set(['why', 'what', 'how', 'when', 'where', 'whi
 // of these is treated as a question so imperative prompts cross question
 // classification instead of being dropped as background speech. ("Explain",
 // "Describe", "Walk me" were already covered by QUESTION_STARTER_PHRASES.)
-const IMPERATIVE_STARTERS = new Set(['design', 'build', 'create', 'compare', 'assume', 'configure', 'architect', 'outline', 'implement', 'plan']);
+const IMPERATIVE_STARTERS = new Set([
+  'explain', 'describe', 'define', 'walk', 'list', 'tell', 'elaborate',
+  'design', 'build', 'create', 'compare', 'assume', 'configure', 'architect', 'outline', 'implement', 'plan'
+]);
+// Scoring weight granted to a leading imperative command verb. A clear technical
+// command like "Explain Dynamic Document Properties." scores 50 (question starter)
+// + 25 (imperative boost) = 75, clearing confirmThreshold (55) so Sniper Mode
+// auto-finalizes it instead of deferring the boundary.
+const IMPERATIVE_COMMAND_BOOST = 25;
 const EFFECTIVE_FIRST_WORD_STARTERS = FIRST_WORD_STARTERS;
 for (const w of IMPERATIVE_STARTERS) EFFECTIVE_FIRST_WORD_STARTERS.add(w);
 
@@ -286,6 +311,98 @@ function loadCandidateContext() {
     console.warn('[ENGINE] Error reading resume/JD knowledge files:', err.message);
   }
   return context;
+}
+
+// ------------------------------------------------------------
+// Keyword-Stall Glossary. Loads boomi-glossary.json (a tiny
+// term -> definition dictionary) so live INTERIM transcripts can be
+// regex-scanned for a known Boomi term. On a hit the UI flashes the
+// instant definition while the interviewer is still speaking — a
+// keyword stall that buys time until the cloud answer replaces it.
+// Safe: a missing or malformed file yields an empty glossary.
+// ------------------------------------------------------------
+function loadGlossary() {
+  try {
+    const glossaryPath = path.join(process.cwd(), 'boomi-glossary.json');
+    if (!fs.existsSync(glossaryPath)) return {};
+    const parsed = JSON.parse(fs.readFileSync(glossaryPath, 'utf8'));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (err) {
+    console.warn('[ENGINE] Error reading boomi-glossary.json:', err.message);
+    return {};
+  }
+}
+
+// Plural-tolerant alternation pattern for a single glossary term:
+//   "atom"        -> atom(?:s)?            matches "atom" and "atoms"
+//   "property"    -> propert(?:y|ies)      matches "property" and "properties"
+//   "extensions"  -> extension(?:s)?       matches the plural key and its singular
+function glossaryTermPattern(term) {
+  const t = String(term).toLowerCase().trim();
+  if (/[^aeiou]y$/.test(t)) return escapeRegex(t.slice(0, -1)) + '(?:y|ies)';
+  if (/s$/.test(t)) return escapeRegex(t.slice(0, -1)) + 's?';
+  return escapeRegex(t) + '(?:s)?';
+}
+
+// Map a matched transcript token back to the canonical glossary key so a
+// plural/derived form ("process properties") resolves to its base term
+// ("process property"). Returns the raw token when no key maps.
+function resolveGlossaryTerm(matched, glossary) {
+  const t = String(matched).toLowerCase().trim();
+  if (glossary[t]) return t;
+  if (glossary[t + 's']) return t + 's';
+  if (t.endsWith('ies') && glossary[t.slice(0, -3) + 'y']) return t.slice(0, -3) + 'y';
+  if (t.endsWith('es') && glossary[t.slice(0, -2)]) return t.slice(0, -2);
+  if (t.endsWith('s') && glossary[t.slice(0, -1)]) return t.slice(0, -1);
+  return t;
+}
+
+// Build one alternation regex from every glossary term. Terms are sorted
+// longest-first so multi-word entries ("runtime cloud") are tried before
+// any shorter key that shares one of their words. Each alternative is
+// plural-tolerant (see glossaryTermPattern). Returns null when the glossary
+// is empty (scanner becomes a no-op).
+function buildGlossaryRegex(glossary) {
+  const keys = Object.keys(glossary || {})
+    .map(k => String(k).toLowerCase().trim())
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+  if (!keys.length) return null;
+  return new RegExp('\\b(' + keys.map(glossaryTermPattern).join('|') + ')\\b', 'i');
+}
+
+// Pure scanner: returns the first glossary term found in the transcript
+// with its definition, or null. Used by the engine and the test harness.
+function matchGlossaryKeyword(transcript, glossary, regex) {
+  if (!glossary || !regex) return null;
+  const m = String(transcript || '').match(regex);
+  if (!m) return null;
+  const term = resolveGlossaryTerm(m[0], glossary);
+  const definition = glossary[term];
+  if (!definition) return null;
+  return { term, definition };
+}
+
+// Multi-keyword scanner: finds EVERY distinct glossary term in the
+// transcript (not just the first) and returns them in transcript order with
+// their definitions. The emergency fallback and the live interim scanner
+// both use it so a sentence like "How do Environment Extensions and Process
+// Properties work in CI/CD?" flashes one reference card per matched term.
+function matchAllGlossaryKeywords(transcript, glossary, regex) {
+  if (!glossary || !regex) return [];
+  const text = String(transcript || '').toLowerCase();
+  const matchedTerms = new Set();
+  const results = [];
+  const globalRegex = new RegExp(regex.source, 'gi');
+  let match;
+  while ((match = globalRegex.exec(text)) !== null) {
+    const term = String(resolveGlossaryTerm(match[0], glossary));
+    if (!matchedTerms.has(term) && glossary[term]) {
+      matchedTerms.add(term);
+      results.push({ term, definition: glossary[term] });
+    }
+  }
+  return results;
 }
 
 // ------------------------------------------------------------
@@ -434,6 +551,15 @@ function classifyQuestionType(text, hasContext) {
 
   if (/\bdifference between\b|\bvs\.?\b|versus|compare/.test(t)) return { type: 'comparison', isIncomplete: false };
   if (/have you worked|have you used|have you ever|your experience|worked with|experience with|have you built|have you implemented|did you build|did you use/.test(t)) return { type: 'experience', isIncomplete: false };
+  // Performance / scaling vocabulary — explicit routing so "large data volumes",
+  // "volumes", "throttling", "performance", and "pagination" never fall through
+  // to generic error-handling (troubleshooting) rules. Definition-form questions
+  // map to the conceptual category; how-to/handling questions map to the
+  // scenario (performance-scaling) category.
+  if (/\blarge data volumes?\b|\bvolumes?\b|\bthrottling\b|\bperformance\b|\bpagination\b|\bscalab\w*\b|\bthroughput\b|\bhigh volume\b/.test(t)) {
+    if (/\bwhat is\b|\bwhat's\b|\bwhats\b|\bdefine\b|\bexplain what\b|\bexplain the\b/.test(t)) return { type: 'conceptual', isIncomplete: false };
+    return { type: 'scenario', isIncomplete: false };
+  }
   if (/error handling|exception|debug|troubleshoot|failed|failure|broken|issue you faced|biggest problem/.test(t)) return { type: 'troubleshooting', isIncomplete: false };
   if (/project|your role|architecture|designed|built a|developed a|tell me about a|tell me about the project/.test(t)) return { type: 'project', isIncomplete: false };
   if (hasContext && /why did you choose|how did you|what happened|tell me more|explain further|and what|in what way|why would/.test(t)) return { type: 'followup', isIncomplete: false };
@@ -450,6 +576,12 @@ function analyzeQuestion(text, opts) {
   let score = 0;
   if (isQuestionStart(text)) score += 50;
   if (/[?？]/.test(text)) score += 25;
+  // Imperative command boost — a leading command verb ("explain", "describe",
+  // "walk me through", "compare", "design", ...) marks a direct technical
+  // command that must clear confirmThreshold and auto-finalize under Sniper
+  // Mode ("Explain Dynamic Document Properties." -> 50 + 25 = 75).
+  const firstWord = (words[0] || '').toLowerCase().replace(/[^a-z]/g, '');
+  if (IMPERATIVE_STARTERS.has(firstWord)) score += IMPERATIVE_COMMAND_BOOST;
   if (words.length >= 5) score += 8;
   if (words.length >= 10) score += 8;
   if (/batch|process|integration|api|error|fail|retry|atom|cloud|connect|perform|design|architecture|data|record|listener|build|implement|profile|project|queue|exception|rest|soap|parallel|volume|retry|monitor/.test(lower)) score += 8;
@@ -514,6 +646,18 @@ class InterviewEngine {
     // Phase 7 — Master Scenario Bank from knowledge/scenarios.json (overridable
     // via opts.scenarioBank for deterministic tests).
     this.scenarioBank = opts.scenarioBank !== undefined ? opts.scenarioBank : loadScenarios();
+    // Keyword-Stall Glossary — tiny term->definition dictionary loaded from
+    // boomi-glossary.json (overridable via opts.glossary for deterministic
+    // tests). The regex is prebuilt once so every interim frame costs a single
+    // alternation test instead of a per-term loop.
+    this.glossary = opts.glossary !== undefined ? opts.glossary : loadGlossary();
+    this.glossaryRegex = buildGlossaryRegex(this.glossary);
+    this.onKeywordStall = typeof opts.onKeywordStall === 'function' ? opts.onKeywordStall : null;
+    // last glossary terms stalled for the current turn (resets on new turn/clear);
+    // tracked in a Set so each distinct term stalls at most once per turn while
+    // multi-keyword transcripts still flash one card per matched term.
+    this._stalledTerm = '';
+    this._stalledTerms = new Set();
     // Phase 4.5 — Dual-Mode Output. 'script' (natural spoken sentences,
     // read aloud) or 'architect' (ultra-concise bullet points for direction).
     this.outputMode = opts.outputMode || 'script'; // 'script' | 'architect'
@@ -656,18 +800,35 @@ class InterviewEngine {
       .replace(/\bflom\b/gi, 'Flow')
       .replace(/\bAdam\b/gi, 'Atom')
       .replace(/\bcue\b/gi, 'queue')
-      .replace(/\bitem\b/gi, 'Atom');
+      .replace(/\bitem\b/gi, 'Atom')
+      // "ci/cd" (interviewer shorthand) normalizes to the glossary term "cicd"
+      .replace(/\bci\s*\/\s*cd\b/gi, 'CICD');
   }
 
   processTranscript(raw, isFinal, speechFinal) {
     const text = normalizeTranscript(this._normalizePhonetics(raw));
     if (!text) return;
     if (this.paused) return; // no new AI processing while paused
+    // Fix A — Strict Sniper Mode: ISOLATE interim frames. While the interviewer
+    // is still speaking (isInterim=true / isFinal=false) we NEVER run the main
+    // routing logic (RAG / Groq / Gemini). Interim frames go EXCLUSIVELY to the
+    // keyword-stall scanner so the UI shows the instant glossary definition;
+    // everything else returns early. This eliminates the speculative
+    // micro-drafting that burned tokens and tripped the 429 rate limit. The
+    // full pipeline fires once, at the strictly-finalized boundary below.
+    if (this.cfg.sniperMode && !isFinal) {
+      this.checkInterimForKeywords(text);
+      return;
+    }
     const now = this._now();
     const gapMs = this.lastSpeechAt ? now - this.lastSpeechAt : 0;
     this.lastSpeechAt = now;
     this._emitLog(isFinal ? 'FINAL_TRANSCRIPT' : 'INTERIM_TRANSCRIPT', text, { words: wordCount(text) });
-    this._pendingSpeechFinal = !!speechFinal;
+    // Strict-boundary signal: a Deepgram speech_final flag OR a finalized
+    // transcript (is_final=true) both mark the utterance as complete, so the
+    // sniper boundary gate can fire the single API request for callers that
+    // finalize via isFinal alone (e.g. the chaos harness).
+    this._pendingSpeechFinal = !!speechFinal || !!isFinal;
 
     if (this.pauseActive) {
       this.pauseActive = false;
@@ -679,8 +840,14 @@ class InterviewEngine {
     }
 
     // ignore ultra-short fragments — but a lone follow-up ("Why?") is a valid
-    // turn when conversation context exists (Phase 2 §19)
-    if (wordCount(text) < this.cfg.ignoreShortWords && !isShortFollowup(text, this.contextHistory.length > 0)) return;
+    // turn when conversation context exists (Phase 2 §19). Even so, a single
+    // word that IS a glossary term ("Atom?") should still stall instantly.
+    if (wordCount(text) < this.cfg.ignoreShortWords) {
+      if (!isShortFollowup(text, this.contextHistory.length > 0)) {
+        if (!isFinal) this.checkInterimForKeywords(text);
+        return;
+      }
+    }
 
     if (text === this.questionBuffer) return; // exact duplicate — nothing new
 
@@ -712,6 +879,33 @@ class InterviewEngine {
     } else {
       this._continueUtterance(text, isFinal, this._pendingSpeechFinal);
     }
+    // Keyword-Stall Scanner — runs AFTER turn bookkeeping so a brand-new turn
+    // has its per-turn stall guard reset by _beginUtterance before the scan.
+    if (!isFinal) this.checkInterimForKeywords(this.questionBuffer);
+  }
+
+  // ------------------------------------------------------------
+  // Keyword-Stall Scanner — instant glossary lookup on interim speech.
+  // Scans for ALL known terms in the live transcript at once
+  // (matchAllGlossaryKeywords) and emits the whole hit set to the UI
+  // (onKeywordStall) so the renderer flashes one compact reference card per
+  // matched term while the interviewer is still speaking. Each distinct term
+  // fires at most once per turn to avoid re-stalling on every interim frame;
+  // the cloud answer (speech_final) replaces the cards.
+  // ------------------------------------------------------------
+  checkInterimForKeywords(transcript) {
+    if (!this.glossaryRegex || !this.onKeywordStall) return [];
+    const hits = matchAllGlossaryKeywords(transcript, this.glossary, this.glossaryRegex);
+    if (!hits.length) return [];
+
+    const newHits = hits.filter(h => !this._stalledTerms.has(h.term));
+    if (!newHits.length) return hits;
+
+    newHits.forEach(h => this._stalledTerms.add(h.term));
+    this._diag('KEYWORD_STALL_MULTI', { terms: hits.map(h => h.term), count: hits.length, transcript: transcript });
+    this._emitLog('KEYWORD_STALL', 'glossary terms matched', { terms: hits.map(h => h.term) });
+    try { this.onKeywordStall(hits); } catch (_) { /* UI must never break the pipeline */ }
+    return hits;
   }
 
   // Strong speech-boundary signal from Deepgram (speech_final=true on a
@@ -781,6 +975,8 @@ class InterviewEngine {
     this.lastSpeechFinal = false;
     this.lastSemanticClass = 'MINOR';
     this.pauseActive = false;
+    this._stalledTerm = '';
+    this._stalledTerms = new Set();
     this._setState(this.paused ? STATES.PAUSED : STATES.LISTENING, 'user_clear');
     if (this.onAnswer) this.onAnswer({ text: '', provisional: false, state: this.state });
     if (this.onHint) this.onHint('');
@@ -809,6 +1005,8 @@ class InterviewEngine {
     this.lastSignal = null;
     this.lastSpeechFinal = false;
     this.lastSemanticClass = 'MINOR';
+    this._stalledTerm = '';
+    this._stalledTerms = new Set();
     this._setState(STATES.PAUSED, 'user_pause');
     this._emitLog('PAUSE', 'listening paused', { at: Date.now() });
   }
@@ -993,6 +1191,8 @@ class InterviewEngine {
     // new turn -> fresh signal/snapshot state (previous snapshot was archived above)
     this.lastSignal = null;
     this.lastSpeechFinal = false;
+    this._stalledTerm = '';
+    this._stalledTerms = new Set();
     this.lastSemanticClass = this.lastSemanticClass || 'MAJOR';
     this.lastSpeechAt = this._now();
     this.turnStartedAt = this._now();
@@ -1265,6 +1465,18 @@ class InterviewEngine {
       this._setTimer('waitIdle', () => { if (!this.paused) this._setState(STATES.LISTENING, 'idle_wait_expired'); }, this.cfg.idleMs);
       return;
     }
+    // Fix A — Strict Sniper Mode: a boundary only fires the API when the
+    // decision is STRICTLY finalized (finalize) AND the boundary came from a
+    // genuine Deepgram speech_final signal (isFinal + speechFinal). A 'soft'
+    // decision or a watchdog-only boundary defers — it never burns a
+    // speculative request. This is the "exactly 1 API request per complete
+    // user question" guarantee.
+    if (this.cfg.sniperMode && (decision !== 'finalize' || !(this.lastSpeechFinal || this._pendingSpeechFinal))) {
+      this.boundaryHandled = true;
+      this._setState(STATES.WAITING_FOR_MORE, 'sniper_boundary_deferred');
+      this._setTimer('waitIdle', () => { if (!this.paused) this._setState(STATES.LISTENING, 'idle_wait_expired'); }, this.cfg.idleMs);
+      return;
+    }
     this.boundaryHandled = true;
     // Phase 2 §21: freeze an immutable snapshot of the completed question.
     // Capture the version BEFORE the increment so a draft that fired for this
@@ -1431,6 +1643,11 @@ Return ONLY a valid JSON object with no markdown formatting:
   // ---------------- Fast Path (single primary candidate) ----------------
 
   _scheduleFastPath() {
+    // Fix A — Strict Sniper Mode: speculative fast-path classification is
+    // DISABLED. The single API request per question fires only at the strictly
+    // finalized boundary (_onBoundary finalize -> _runFinalAnswer). Scheduling
+    // a fast-path call here would be a second (unwanted) request.
+    if (this.cfg.sniperMode) return;
     // Phase 12 — Multi-Tier Router: in 'rag-only' mode no external API call is
     // allowed, including the fast-path classification tier.
     if (this.cfg.routerMode === 'rag-only') return;
@@ -1464,7 +1681,7 @@ Return ONLY a valid JSON object with no markdown formatting:
     // entirely (the confirmed boundary promotes the local answer instantly).
     const ragHit = this._ragFirstSearch(text);
     if (ragHit) {
-      this.draftAnswer = this.openersEnabled ? `${this._pickOpener()} ${ragHit.answer}` : ragHit.answer;
+      this.draftAnswer = this.openersEnabled ? this._withOpener(this._pickOpener(), ragHit.answer) : ragHit.answer;
       this.draftStatus = 'done';
       this.draftSnapshot = this.snapshotNo;
       this._draftLocal = true;
@@ -1555,6 +1772,11 @@ Return ONLY a valid JSON object with no markdown formatting:
   // ---------------- Background draft (promoted at boundary) ----------------
 
   _scheduleDraft(display) {
+    // Fix A — Strict Sniper Mode: speculative micro-drafting is DISABLED.
+    // This was the token-burn culprit (3-4 API calls per 10-word question).
+    // The exactly-one request per question is handled by _runFinalAnswer at
+    // the strictly finalized boundary.
+    if (this.cfg.sniperMode) return;
     if (this._analyze(this.questionBuffer).isIncomplete) return;
     const now = this._now();
     const since = now - this.lastDraftAt;
@@ -1599,7 +1821,7 @@ Return ONLY a valid JSON object with no markdown formatting:
     }
     if (localMatch) {
       const opener = this._pickOpener();
-      this.draftAnswer = this.openersEnabled ? `${opener} ${localMatch}` : localMatch;
+      this.draftAnswer = this.openersEnabled ? this._withOpener(opener, localMatch) : localMatch;
       this.draftStatus = 'done';
       this._draftLocal = true;
       this._diag('LOCAL_SCENARIO_INTERCEPT', { turnId: this.turnId, latencyMs: this._now() - startedAt, source: ragHit ? 'rag-first-local' : 'local-scenario-bank' });
@@ -1807,12 +2029,22 @@ Return ONLY a valid JSON object with no markdown formatting:
 
   // Shared opener selection (Phase 5) so both the draft and final paths can
   // prepend the same type-matched conversational opener.
-  // Update 3 — deterministic: each question type maps to one canonical opener
-  // (no randomness), falling back to a generic line for unknown types.
+  // Update — randomized: each question type has an array of equivalent openers
+  // (including one empty string so the opener is occasionally skipped). One is
+  // picked at random per response.
   _pickOpener() {
-    return this.openersEnabled
-      ? (SAFE_OPENERS[this.type] || SAFE_OPENERS.fallback)
-      : '';
+    if (!this.openersEnabled) return '';
+    const pool = SAFE_OPENERS[this.type] || SAFE_OPENERS.fallback;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // Prepend the opener to the answer body with a line break immediately after
+  // the opener, so the actual answer starts on a new line. The UI renders the
+  // "\n" as a break (white-space: pre-line on the answer blocks).
+  _withOpener(opener, body) {
+    if (!opener) return body;
+    if (!body) return opener;
+    return `${opener}\n${body}`;
   }
 
   // Finalize — Anti-Duplicate Opener: some LLMs echo the conversational opener
@@ -1825,18 +2057,38 @@ Return ONLY a valid JSON object with no markdown formatting:
     const cleanOpener = opener.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     const cleanBody = body.substring(0, opener.length + 15).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     if (cleanBody.includes(cleanOpener)) return body; // Drop duplicate
-    return `${opener} ${body}`;
+    return `${opener}\n${body}`;
   }
 
   // STEP 7 — Emergency local response. Instant, type-aware Boomi answer used
   // ONLY when every LLM provider has failed. Never mentions providers/APIs/
   // timeouts/network; keeps the interview flowing and the engine alive.
+  // Emergency RAG Summary: when the question names known glossary terms, the
+  // answer becomes ONE natural, conversational sentence that names the matched
+  // terms (no formatted bullet lists — the teleprompter parses clean sentence
+  // boundaries, so a single flowing sentence renders perfectly).
   _emergencyAnswer() {
+    const hits = matchAllGlossaryKeywords(this.questionBuffer, this.glossary, this.glossaryRegex);
+    if (hits.length > 0) {
+      const terms = hits.map(h => String(h.term));
+      const list = terms.length === 1 ? terms[0] : terms.slice(0, -1).join(', ') + ' and ' + terms[terms.length - 1];
+      this._diag('EMERGENCY_RAG_DUMP', {
+        turnId: this.turnId,
+        transcript: this.questionBuffer,
+        terms,
+        source: 'local-glossary'
+      });
+      const body = `I can explain the core concepts here, specifically focusing on ${list}.`;
+      return this.openersEnabled ? this._withOpener(this._pickOpener(), body) : body;
+    }
+
+    const scenarioMatch = this._searchLocalScenarios(this.questionBuffer);
+    if (scenarioMatch) return scenarioMatch;
+
     let body = EMERGENCY_RESPONSES[this.type] || EMERGENCY_RESPONSES.fallback;
     if (this.candidateContext && (this.type === 'experience' || this.type === 'project')) {
       body = EMERGENCY_EXPERIENCE_VARIANT;
     }
-    const opener = this._pickOpener();
     this._diag('EMERGENCY_RESPONSE', {
       turnId: this.turnId,
       transcript: this.questionBuffer,
@@ -1844,7 +2096,7 @@ Return ONLY a valid JSON object with no markdown formatting:
       source: 'local-emergency',
       groundedInCandidateContext: !!this.candidateContext
     });
-    return this.openersEnabled ? `${opener} ${body}` : body;
+    return this.openersEnabled ? this._withOpener(this._pickOpener(), body) : body;
   }
 
   // STEP 7 — Deliver the emergency answer as the final answer for the turn and
@@ -1937,7 +2189,7 @@ Return ONLY a valid JSON object with no markdown formatting:
     // Phase 5 — Latency Masker: pick a type-matched safe opener and flash it
     // to the UI at 0ms so the candidate has something to say while Groq streams.
     const selectedOpener = this._pickOpener();
-    if (this.openersEnabled && this.onAnswer) {
+    if (this.openersEnabled && this.onAnswer && selectedOpener) {
       this.onAnswer({ text: selectedOpener, provisional: true, streaming: true, state: STATES.ANSWERING, confidence });
     }
     this._setState(STATES.ANSWERING, 'final_answer_started');
@@ -1946,7 +2198,7 @@ Return ONLY a valid JSON object with no markdown formatting:
       const content = await this._callAnswer(text, mode || 'final', (chunk) => {
         if (reqId !== this.finalReqId) return;
         if (chunk && this.onAnswer) {
-          this.onAnswer({ text: `${selectedOpener} ${chunk}`.trim(), provisional: true, streaming: true, state: STATES.ANSWERING, confidence });
+          this.onAnswer({ text: selectedOpener ? `${selectedOpener}\n${chunk}` : chunk, provisional: true, streaming: true, state: STATES.ANSWERING, confidence });
         }
       });
       const latency = this._now() - startedAt;
@@ -2085,13 +2337,31 @@ Return ONLY a valid JSON object with no markdown formatting:
     return this.fastPathCall(this.buildFastPrompt(text));
   }
 
+  // Continuous Memory — resolve the Q/A history to prepend right before the
+  // current user prompt. The message-level conversationHistory (last 4 turns /
+  // 8 messages) is the primary source; the short contextHistory {q,a} pairs
+  // (last 2-3 turns) back it up so a follow-up like "How does it differ from a
+  // molecule?" is always grounded in the previous turn ("What is an Atom?"),
+  // even if the message log was ever reset.
+  _memoryMessages() {
+    if (this.conversationHistory.length > 0) return this.conversationHistory.slice();
+    const pairs = this.contextHistory.filter(p => String(p.q || '').trim() && String(p.a || '').trim());
+    const msgs = [];
+    for (const p of pairs.slice(-3)) {
+      msgs.push({ role: 'user', content: p.q });
+      msgs.push({ role: 'assistant', content: p.a });
+    }
+    return msgs.slice(-8);
+  }
+
   _callAnswer(text, mode, onChunk) {
     if (!this.answerCall) return Promise.resolve('');
     const messages = this.buildAnswerPrompt(text, mode);
-    // Phase 6 — inject the rolling conversation history right before the current
-    // user prompt so the model answers with full interview memory (last 4 turns).
-    if (this.conversationHistory.length > 0) {
-      messages.splice(messages.length - 1, 0, ...this.conversationHistory);
+    // Phase 6 / Continuous Memory — inject the rolling Q/A history right before
+    // the current user prompt so the model answers with full interview memory.
+    const history = this._memoryMessages();
+    if (history.length > 0) {
+      messages.splice(messages.length - 1, 0, ...history);
     }
     return this.answerCall(messages, mode, onChunk);
   }
@@ -2114,5 +2384,9 @@ module.exports = {
   semanticChangeReason,
   boundaryDecisionInfo,
   isShortFollowup,
-  isQuestionStart
+  isQuestionStart,
+  loadGlossary,
+  buildGlossaryRegex,
+  matchGlossaryKeyword,
+  matchAllGlossaryKeywords
 };

@@ -147,8 +147,26 @@ async function main() {
   check('classify incomplete trailing "handle"', () => {
     assert.strictEqual(classifyQuestionType('How would you handle', false).type, 'incomplete');
   });
+  check('classify incomplete "handle?" with question mark', () => {
+    assert.strictEqual(classifyQuestionType('How do you handle?', false).type, 'incomplete');
+  });
   check('classify complete question with ?', () => {
     assert.strictEqual(classifyQuestionType('How would you handle a large volume in Boomi?', false).type, 'scenario');
+  });
+  check('classify "How does that work?" complete', () => {
+    assert.strictEqual(classifyQuestionType('How does that work?', false).isIncomplete, false);
+  });
+  check('classify "why would you use it?" complete', () => {
+    assert.strictEqual(classifyQuestionType('What is DocumentCache, and why would you use it?', false).isIncomplete, false);
+  });
+  check('classify differ-from as comparison', () => {
+    assert.strictEqual(classifyQuestionType('And how does it actually differ from a molecule?', false).type, 'comparison');
+  });
+  check('classify "best practices" (plural) as best-practice', () => {
+    assert.strictEqual(classifyQuestionType('what are the absolute best practices?', false).type, 'best-practice');
+  });
+  check('classify "best way to do that" as best-practice', () => {
+    assert.strictEqual(classifyQuestionType('what is the best way to do that?', false).type, 'best-practice');
   });
   check('classify comparison', () => {
     assert.strictEqual(classifyQuestionType("What's the difference between an Atom and a Molecule?", false).type, 'comparison');
@@ -380,6 +398,48 @@ async function main() {
     assert.strictEqual(mocks.answerCount(), 1, 'exactly one answer API call for one complete question');
     assert.strictEqual(mocks.fastCount(), 0, 'no speculative fast-path call in sniper mode');
     assert.ok(finalText.includes('I would batch them into manageable chunks.'), 'final answer delivered');
+  });
+
+  await checkAsync('incomplete "How do you handle?" + late continuation merges into one question', async () => {
+    const timer = makeTimer();
+    const mocks = makeMockCalls();
+    const engine = makeEngine(timer, mocks, { cfg: { sniperMode: true } });
+    let finalText = '';
+    engine.onAnswer = ({ text, provisional }) => { if (!provisional) finalText = text; };
+    engine.start();
+    // verb-tailed question with a trailing "?" is STILL incomplete -> no API call
+    engine.processTranscript('How do you handle?', true, true);
+    timer.advance(2000); // pause far beyond continueWindowMs (1500)
+    await flush();
+    assert.strictEqual(mocks.answerCount(), 0, 'no premature answer for the truncated fragment');
+    // a non-fresh-turn continuation merges regardless of the pause length
+    engine.processTranscript('Extremely large data volumes in Boomi?', true, true);
+    timer.advance(1000);
+    await flush();
+    while (mocks.pendingFastCount()) mocks.resolveNextFast('{"topic":"volume","type":"scenario","direction":"d","hint":"h"}');
+    while (mocks.pendingAnswerCount()) mocks.resolveNextAnswer('I would chunk them and scale the Atom out.');
+    await flush();
+    assert.strictEqual(mocks.answerCount(), 1, 'exactly one answer call for the merged question');
+    const merged = engine.getLatestSnapshot().transcript;
+    assert.ok(/how do you handle extremely large data volumes in boomi\?/i.test(merged), 'merged buffer reads as one natural question, got: ' + merged);
+    assert.ok(finalText.includes('I would chunk them'), 'final answer delivered for the merged question');
+  });
+
+  await checkAsync('referential question is grounded in the prior topic statement', async () => {
+    const timer = makeTimer();
+    const mocks = makeMockCalls();
+    const engine = makeEngine(timer, mocks, { openersEnabled: false });
+    engine.start();
+    // a finalized non-question statement becomes the remembered topic
+    engine.processTranscript('Let us say, you need to connect to Salesforce.', true);
+    timer.advance(100);
+    assert.strictEqual(engine.lastTopic, 'Let us say, you need to connect to Salesforce.');
+    // a referential question with no domain keyword gets the topic injected
+    const msgs = engine.buildAnswerPrompt('Like, what is the best way to do that?', 'final');
+    assert.ok(msgs[0].content.includes('you need to connect to Salesforce'), 'topic injected into prompt');
+    // a question that names its own domain topic does NOT inherit a stale topic
+    const msgs2 = engine.buildAnswerPrompt('And how does it actually differ from a molecule?', 'final');
+    assert.ok(!msgs2[0].content.includes('you need to connect to Salesforce'), 'no injection when the question names its own topic');
   });
 
   await checkAsync('sniper mode: soft boundary defers and never burns an API request', async () => {

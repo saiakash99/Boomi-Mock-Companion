@@ -280,6 +280,19 @@ const INCOMPLETE_TRAILERS = [
   'and', 'or', 'the', 'a', 'an', 'to', 'of', 'in', 'on', 'use', 'used'
 ];
 
+// Chaos Patch 2 — transitive-continuation verbs. A question that ENDS on one of
+// these demands a complement ("How do you handle?"), so it stays incomplete even
+// though it carries a trailing question mark. Distinct from INCOMPLETE_TRAILERS
+// (which also holds intransitive/completable words like "work" or "it" that
+// must NOT be flagged incomplete when a "?" is present — "How does that work?",
+// "Why would you use it?").
+const TRANSITIVE_TRAILERS = [
+  'handle', 'solve', 'fix', 'manage', 'approach', 'build', 'use', 'used',
+  'process', 'connect', 'configure', 'deploy', 'implement', 'create', 'design',
+  'route', 'map', 'integrate', 'monitor', 'debug', 'retry', 'transform',
+  'validate', 'extract', 'load', 'consume', 'fetch', 'sync', 'replicate'
+];
+
 // ------------------------------------------------------------
 // Phase 4 — Flexible file-based grounding. Reads the candidate's
 // resume + target JD from the local knowledge/ folder so answers
@@ -543,13 +556,22 @@ function classifyQuestionType(text, hasContext) {
   }
 
   let isIncomplete = words.length < 3;
-  if (!/[?？]\s*$/.test(String(text))) {
-    const lw = (words[words.length - 1] || '').replace(/[^a-z]/g, '');
-    if (lw && INCOMPLETE_TRAILERS.includes(lw)) isIncomplete = true;
+  const lastToken = (words[words.length - 1] || '').replace(/[?？,.!]/, '');
+  if (lastToken) {
+    if (!/[?？]\s*$/.test(String(text))) {
+      if (INCOMPLETE_TRAILERS.includes(lastToken)) isIncomplete = true;
+    } else if (words.length <= 6 && /^how\b/i.test(String(text).trim()) && TRANSITIVE_TRAILERS.includes(lastToken)) {
+      // A short "how" question ending on a transitive verb ("How do you
+      // handle?") still needs its complement ("...large data volumes in
+      // Boomi?") — grammatically incomplete even with the question mark. The
+      // how-form gate keeps "Why did you choose that approach?" (noun object)
+      // and "How does that work?" (intransitive) classified as complete.
+      isIncomplete = true;
+    }
   }
   if (isIncomplete) return { type: 'incomplete', isIncomplete: true };
 
-  if (/\bdifference between\b|\bvs\.?\b|versus|compare/.test(t)) return { type: 'comparison', isIncomplete: false };
+  if (/\bdifference between\b|\bvs\.?\b|versus|compare|\bdiffer(?:s|ed|ent)?\b/.test(t)) return { type: 'comparison', isIncomplete: false };
   if (/have you worked|have you used|have you ever|your experience|worked with|experience with|have you built|have you implemented|did you build|did you use/.test(t)) return { type: 'experience', isIncomplete: false };
   // Performance / scaling vocabulary — explicit routing so "large data volumes",
   // "volumes", "throttling", "performance", and "pagination" never fall through
@@ -564,8 +586,11 @@ function classifyQuestionType(text, hasContext) {
   if (/project|your role|architecture|designed|built a|developed a|tell me about a|tell me about the project/.test(t)) return { type: 'project', isIncomplete: false };
   if (hasContext && /why did you choose|how did you|what happened|tell me more|explain further|and what|in what way|why would/.test(t)) return { type: 'followup', isIncomplete: false };
   if (/how would|what would|if you|imagine|scenario|million records|large volume|handle a large|how do you process|design a|approach/.test(t)) return { type: 'scenario', isIncomplete: false };
+  // Best-practice must be classified BEFORE the generic "what is/what are"
+  // conceptual rule so "what are the absolute best practices?" lands as a
+  // best-practice question, not a definition.
+  if (/best practice(?:s)?\b|\bbest way\b|how do you|how should|should you/.test(t)) return { type: 'best-practice', isIncomplete: false };
   if (/what is|what's|whats|define|what does|what are|explain what|explain the/.test(t)) return { type: 'conceptual', isIncomplete: false };
-  if (/best practice|how do you|how should|should you/.test(t)) return { type: 'best-practice', isIncomplete: false };
   return { type: 'conceptual', isIncomplete: false };
 }
 
@@ -724,6 +749,10 @@ class InterviewEngine {
     this.draftAnswer = '';
     this.currentAnswer = '';
     this.lastFinalizedText = '';
+    // Topic memory — the most recent non-question statement, kept so a later
+    // referential question ("Like, what is the best way to do that?") can be
+    // grounded in the topic the interviewer was actually discussing.
+    this.lastTopic = '';
 
     // 3-tier question candidates (section 11-13)
     this.candidates = [];
@@ -802,7 +831,11 @@ class InterviewEngine {
       .replace(/\bcue\b/gi, 'queue')
       .replace(/\bitem\b/gi, 'Atom')
       // "ci/cd" (interviewer shorthand) normalizes to the glossary term "cicd"
-      .replace(/\bci\s*\/\s*cd\b/gi, 'CICD');
+      .replace(/\bci\s*\/\s*cd\b/gi, 'CICD')
+      // "try slash catch" -> the glossary/scenario keyword form "try catch"
+      .replace(/\btry\s+slash\s+catch\b/gi, 'try catch')
+      // "AtomCloud" (one word) -> the two-word runtime entity "Atom Cloud"
+      .replace(/\batomcloud\b/gi, 'Atom Cloud');
   }
 
   processTranscript(raw, isFinal, speechFinal) {
@@ -857,7 +890,8 @@ class InterviewEngine {
     // (MINOR -> nothing expensive; MEANINGFUL -> refresh state; MAJOR -> strengthen).
     const prevSemantic = this.lastSemanticClass;
     const prevType = this.type;
-    const nextType = this._analyze(text).type;
+    const nextAnalysis = this._analyze(text);
+    const nextType = nextAnalysis.type;
     this.lastSemanticClass = classifySemanticChange(this.questionBuffer, text, prevType, nextType);
     if (this.lastSemanticClass !== 'MINOR') {
       this._diag('SEMANTIC_CHANGE', {
@@ -871,9 +905,22 @@ class InterviewEngine {
       });
     }
 
+    // Topic memory — remember the most recent non-question statement (a finalized
+    // utterance that never classified as a question) so a later referential
+    // question ("Like, what is the best way to do that?") can be grounded in the
+    // topic the interviewer was actually discussing.
+    if (isFinal && !nextAnalysis.isQuestion && wordCount(text) >= this.cfg.minWordsForQuestion) {
+      this.lastTopic = normalizeTranscript(text);
+    }
+
     const same = sameUtterance(this.questionBuffer, text);
+    // Fragmentation fix: a pending INCOMPLETE question ("How do you handle?")
+    // keeps waiting for its complement no matter how long the pause, so any
+    // non-fresh-turn utterance that follows is merged onto it.
     const continuation = this.phase !== 'answered' && this.questionBuffer &&
-      (same || (gapMs < this.cfg.continueWindowMs && !this._looksLikeFreshTurn(text)));
+      (same ||
+       (this.isIncomplete && !this._looksLikeFreshTurn(text)) ||
+       (gapMs < this.cfg.continueWindowMs && !this._looksLikeFreshTurn(text)));
     if (!continuation) {
       this._beginUtterance(text, isFinal, this._pendingSpeechFinal);
     } else {
@@ -1285,7 +1332,11 @@ class InterviewEngine {
     const known = new Set(al.split(/\s+/).filter(Boolean));
     const newWords = b.split(/\s+/).filter(w => w && !known.has(w.toLowerCase()));
     if (!newWords.length) return a;
-    return normalizeTranscript(a + ' ' + newWords.join(' '));
+    // A trailing question mark on the base fragment ("How do you handle?") is a
+    // stall artifact of the incomplete verb — drop it so the merged buffer reads
+    // as one natural question ("How do you handle extremely large data volumes?").
+    const base = a.replace(/[?？,.\s]+$/, '');
+    return normalizeTranscript(base + ' ' + newWords.join(' '));
   }
 
   // A fragment that opens with a question starter ("how would...", "why...")
@@ -2118,12 +2169,13 @@ Return ONLY a valid JSON object with no markdown formatting:
     this._diag('TURN_COMPLETED', {
       turnId: this.turnId,
       transcript: text,
+      answer,
       durationMs: this.turnStartedAt ? this._now() - this.turnStartedAt : null,
       snapshotNo: this.lastSnapshot ? this.lastSnapshot.snapshotNo : this.snapshotNo,
       confidence: 'yellow',
       source: 'emergency'
     });
-    this._diag('ANSWER_DELIVERED', { turnId: this.turnId, source: 'emergency' });
+    this._diag('ANSWER_DELIVERED', { turnId: this.turnId, source: 'emergency', answer });
     if (this.onAnswer) this.onAnswer({ text: answer, provisional: false, state: STATES.ANSWER_READY, confidence: 'yellow' });
     this._scheduleIdle();
     this._emitLog('EMERGENCY_RESPONSE', 'emergency local answer delivered', { turnId: this.turnId });
@@ -2163,12 +2215,13 @@ Return ONLY a valid JSON object with no markdown formatting:
       this._diag('TURN_COMPLETED', {
         turnId: this.turnId,
         transcript: text,
+        answer,
         durationMs: this.turnStartedAt ? this._now() - this.turnStartedAt : null,
         snapshotNo: this.lastSnapshot ? this.lastSnapshot.snapshotNo : this.snapshotNo,
         confidence: 'green',
         source: localSource
       });
-      this._diag('ANSWER_DELIVERED', { turnId: this.turnId, source: localSource });
+      this._diag('ANSWER_DELIVERED', { turnId: this.turnId, source: localSource, answer });
       this._diag('RAG_FIRST_INTERCEPT', {
         turnId: this.turnId, latencyMs: this._now() - startedAt,
         score: ragHit ? ragHit.score : null, source: localSource
@@ -2228,11 +2281,12 @@ Return ONLY a valid JSON object with no markdown formatting:
         this._diag('TURN_COMPLETED', {
           turnId: this.turnId,
           transcript: text,
+          answer,
           durationMs: this.turnStartedAt ? this._now() - this.turnStartedAt : null,
           snapshotNo: this.lastSnapshot ? this.lastSnapshot.snapshotNo : this.snapshotNo,
           confidence
         });
-        this._diag('ANSWER_DELIVERED', { turnId: this.turnId, source: 'cloud' });
+        this._diag('ANSWER_DELIVERED', { turnId: this.turnId, source: 'cloud', answer });
         if (this.onAnswer) this.onAnswer({ text: answer, provisional: false, state: STATES.ANSWER_READY, confidence });
         this._scheduleIdle();
       }
@@ -2269,6 +2323,22 @@ Return ONLY a valid JSON object with no markdown formatting:
       .join(' ; ');
   }
 
+  // Topic grounding — a referential question ("Like, what is the best way to do
+  // that?") carries no domain keywords of its own, so without the prior topic
+  // the provider has no idea what "that" refers to. When the question is
+  // referential AND contains no domain term, inject the last non-question
+  // statement (e.g. "you need to connect to Salesforce") so the answer is
+  // grounded. Questions that already name a domain term ("...differ from a
+  // molecule?") are left untouched — their topic is self-evident.
+  _topicInjectionFor(text) {
+    if (!this.lastTopic || wordCount(this.lastTopic) < 4) return '';
+    const lower = ' ' + String(text || '').toLowerCase() + ' ';
+    const referential = /\bdo that\b|\bdo this\b|\bdo it\b|\bthat\b|\bthis\b|\bit\b|\bthose\b|\bthem\b|\bsuch\b/i.test(lower);
+    if (!referential) return '';
+    if (/\batom|molecule|process|integration|api|error|fail|retry|cloud|connect|perform|design|architecture|data|record|listener|build|implement|profile|project|queue|exception|rest|soap|parallel|volume|monitor|salesforce|map|shape|deployment|environment|extension|document|runtime|property|shape/i.test(lower)) return '';
+    return ` The interviewer previously mentioned: "${this.lastTopic}". Use that topic to frame your answer — a question like this is a follow-up on that subject.`;
+  }
+
   // ---------------- Prompts ----------------
 
   buildFastPrompt(text) {
@@ -2289,6 +2359,7 @@ Return ONLY a valid JSON object with no markdown formatting:
     const dir = this.direction ? ` Suggested angle to cover: ${this.direction}.` : '';
     const ctx = fc ? ` Earlier in this interview, Q/A you may naturally reference: ${fc}.` : '';
     const candidateGrounding = this.candidateContext || '';
+    const topicGrounding = this._topicInjectionFor(text);
     // STEP 8 — weak local-scenario matches are injected as grounding so the
     // provider answer can reference related Boomi knowledge when no STRONG
     // scenario interception fired.
@@ -2317,7 +2388,7 @@ Return ONLY a valid JSON object with no markdown formatting:
         role: 'system',
         content: `You are a senior ${this.domain} integration developer in a live technical interview, and you are the CANDIDATE. Answer the interviewer's question exactly the way a real, experienced candidate would say it out loud. Speak in flowing, natural prose — no bullets, no markdown, no headings. ${personal
           ? 'Use first person ("I would...", "I typically...") as a candidate describing their own approach. For experience/project questions, describe what you would do in a natural, credible way.'
-          : 'Give a crisp, direct technical explanation. Do not invent a personal story.'} ${formatRule} Never fabricate specific companies, exact numbers, or tools you are not sure about; if you lack the candidate's real experience, use a safe framing like "I would approach that by..." instead of inventing facts. Avoid filler openers such as "Certainly!", "Absolutely!", "In today's world", "There are several approaches", "It is important to note", or "As an AI". Question type: ${type}.${dir}${ctx}${localHints}${modeNote} ${noPleasantryRule} ${candidateGrounding} STRICT RULE: You are the candidate described in CANDIDATE RESUME. Speak naturally in first person ('In my project, I implemented...', 'I usually approach this by...'). Highlight skills matching the TARGET JOB DESCRIPTION. NEVER invent or fabricate experience. If a topic is not in the candidate's resume, truthfully state 'I haven't worked with that directly, but my understanding is...' followed by a concise, accurate technical answer.`
+          : 'Give a crisp, direct technical explanation. Do not invent a personal story.'} ${formatRule} Never fabricate specific companies, exact numbers, or tools you are not sure about; if you lack the candidate's real experience, use a safe framing like "I would approach that by..." instead of inventing facts. Avoid filler openers such as "Certainly!", "Absolutely!", "In today's world", "There are several approaches", "It is important to note", or "As an AI". Question type: ${type}.${dir}${ctx}${localHints}${topicGrounding}${modeNote} ${noPleasantryRule} ${candidateGrounding} STRICT RULE: You are the candidate described in CANDIDATE RESUME. Speak naturally in first person ('In my project, I implemented...', 'I usually approach this by...'). Highlight skills matching the TARGET JOB DESCRIPTION. NEVER invent or fabricate experience. If a topic is not in the candidate's resume, truthfully state 'I haven't worked with that directly, but my understanding is...' followed by a concise, accurate technical answer.`
       },
       { role: 'user', content: this._answerUserText(text) }
     ];
